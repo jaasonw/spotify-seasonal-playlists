@@ -56,6 +56,12 @@ def add_user(id):
         conn.execute(sql, (id,))
         conn.commit()
     conn.close()
+def add_error(id, error):
+    conn = sqlite3.connect(DATABASE_NAME)
+    sql = f'INSERT INTO Errors(id, error) VALUES(?, ?)'
+    conn.execute(sql, (id, error))
+    conn.commit()
+    conn.close()
 
 def remove_user(id):
     conn = sqlite3.connect(DATABASE_NAME)
@@ -78,8 +84,16 @@ def init_database():
             last_playlist TEXT DEFAULT "",
             last_update TEXT DEFAULT ""
         ) ''')
+        
         print("Created table")
         for filename in os.listdir(CACHE_PATH):
             id = filename[len(".cache-"):]
             add_user(id)
+
+    conn.execute(''' CREATE TABLE IF NOT EXISTS Errors (
+        id text
+            constraint Errors_Users_id_fk
+                references Users (id),
+        error text
+    )''')
     conn.close()

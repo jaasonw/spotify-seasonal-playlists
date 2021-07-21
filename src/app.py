@@ -42,6 +42,7 @@ class App(object):
                 message = timestamp + ": " + message
                 db.increment_field(id, "error_count")
                 db.update_user(id, "last_error", message)
+                db.add_error(id, message)
 
                 # if a user passes a certain error threshold, delete their 
                 # token, they probably revoked our access
