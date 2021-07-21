@@ -53,7 +53,7 @@ def add_user(id):
         update_user(id, "error_count", 0)
     else:
         sql = f'INSERT INTO Users(id) VALUES(?)'
-        conn.execute(sql, (id))
+        conn.execute(sql, (id,))
         conn.commit()
     conn.close()
 
@@ -78,6 +78,7 @@ def init_database():
             last_playlist TEXT DEFAULT "",
             last_update TEXT DEFAULT ""
         ) ''')
+        print("Created table")
         for filename in os.listdir(CACHE_PATH):
             id = filename[len(".cache-"):]
             add_user(id)
