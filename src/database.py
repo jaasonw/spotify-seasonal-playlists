@@ -53,7 +53,7 @@ def add_user(id):
         update_user(id, "error_count", 0)
     else:
         sql = f'INSERT INTO Users(id) VALUES(?)'
-        conn.execute(sql, (id,))
+        conn.execute(sql, (id,0,0,))
         conn.commit()
     conn.close()
 def add_error(id, error):

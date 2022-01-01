@@ -14,7 +14,7 @@ class App(object):
     def __init__(self):
         if not os.path.exists(constant.CACHE_PATH):
             os.mkdir(constant.CACHE_PATH)
-        db.init_database()
+        # db.init_database()
 
     # Refreshes the access tokens and updates the playlists for all clients in
     # the cache
@@ -41,7 +41,6 @@ class App(object):
                 message = str(e)
                 message = timestamp + ": " + message
                 db.increment_field(id, "error_count")
-                db.update_user(id, "last_error", message)
                 db.add_error(id, message)
 
                 # if a user passes a certain error threshold, delete their 
