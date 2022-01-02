@@ -74,6 +74,7 @@ def add_user(id):
         # reset user if they reregister
         if get_user(id) != None:
             update_user(id, "error_count", 0)
+            update_user(id, "active", "")
         else:
             sql = f'INSERT INTO Users(id) VALUES(?)'
             cursor.execute(sql, (id,))
