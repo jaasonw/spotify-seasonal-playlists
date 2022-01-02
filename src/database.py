@@ -78,7 +78,7 @@ def add_user(id):
         else:
             sql = f'INSERT INTO Users(id) VALUES(?)'
             cursor.execute(sql, (id,))
-            cursor.commit()
+            conn.commit()
 
 
 def add_error(id, error):
