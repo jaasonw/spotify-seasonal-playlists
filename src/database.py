@@ -58,8 +58,8 @@ def get_field(id, field):
         cursor = conn.cursor()
         sql = f'SELECT * FROM Users WHERE id = ?'
         cursor.execute(sql, (id,))
-        entry = cursor.fetchone()[f'{field}']
-        return entry
+        entry = cursor.fetchone()
+        return entry[field]
 
 
 def increment_field(id, field):
