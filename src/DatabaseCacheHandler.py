@@ -27,8 +27,15 @@ class DatabaseCacheHandler(CacheHandler):
             try:
                 cursor.execute(
                     f'DELETE FROM Tokens WHERE id=?', (self.username,))
-                cursor.execute('INSERT INTO Tokens VALUES (?,?,?,?,?,?,?)', [
-                    self.username, *token_info.values()])
+                cursor.execute('INSERT INTO Tokens VALUES (?,?,?,?,?,?,?)', (
+                    self.username,
+                    token_info["access_token"],
+                    token_info["token_type"],
+                    token_info["expires_in"],
+                    token_info["refresh_token"],
+                    token_info["scope"],
+                    token_info["expires_at"],
+                ))
                 conn.commit()
             except Exception as e:
                 print(f'Could not save token to db: ${e}')
