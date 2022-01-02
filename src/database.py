@@ -31,7 +31,7 @@ def get_users():
         row = cursor.fetchall()
         conn.commit()
         if row:
-            return row[0]
+            return [x[0] for x in row]
         else:
             return None
 
