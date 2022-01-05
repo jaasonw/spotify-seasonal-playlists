@@ -1,10 +1,12 @@
 from spotipy import CacheHandler
 import database as db
 
-# Cache handler that uses the sqlite database for token data
-
 
 class DatabaseCacheHandler(CacheHandler):
+    """
+    Cache handler that uses the sqlite database for token data
+    """
+
     def __init__(self, username):
         self.username = username
 

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import sys
 
 from constant import DATABASE_NAME
 # utility functions for manipulating the database
@@ -93,6 +94,14 @@ def remove_user(id):
         sql = f'DELETE FROM Users WHERE id=?'
         conn.execute(sql, (id,))
         conn.commit()
+
+
+# TODO: Unit testing
+if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        if sys.argv[1] == "--test":
+            pass
+
 
 
 # def init_database():

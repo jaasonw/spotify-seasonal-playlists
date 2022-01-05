@@ -1,3 +1,4 @@
+import spotipy
 import constant
 import database
 from collections import deque
@@ -6,7 +7,7 @@ from datetime import timezone as tz
 from saved_songs import get_unadded_songs
 
 # returns the season given a time
-def get_current_season(now) -> str:
+def get_current_season(now: dt) -> str:
     if now.month > 2 and now.month < 6: # MAR - MAY
         return constant.SPRING
     elif now.month > 5 and now.month < 9: # JUN - AUG
@@ -17,7 +18,7 @@ def get_current_season(now) -> str:
         return constant.WINTER     
 
 # returns the playlist id based on date
-def get_target_playlist(date, client) -> str:
+def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
     """
     ASSUMPTIONS: a user has no duplicate playlist names
     In the case that a user has a duplicate playlist name, the script will modify the one 'lower' in the user's playlist library
@@ -44,7 +45,7 @@ def get_target_playlist(date, client) -> str:
         return all_playlists[target_playlist_name]
 
 # returns a datetime object of the most recently added song of a playlist
-def get_newest_date_in_playlist(pl_id, client):
+def get_newest_date_in_playlist(pl_id: int, client: spotipy.Spotify):
     """    
     ASSUMPTIONS: the order of the songs in the playlist is in which the songs were added
     Potential Solution: loop through every track's date added and find the max (not implemented)
@@ -59,7 +60,7 @@ def get_newest_date_in_playlist(pl_id, client):
 # given a datetime, return a dt of the start of the season
 # for e.g. if its winter 2020, return DEC 1, 2019 00:00 UTC
 # for e.g. if its spring 2020, return MAR 1, 2020 00:00 UTC
-def start_season_time(now) -> dt:
+def start_season_time(now: dt) -> dt:
     if now.month in [12, 1, 2]:
         return dt(now.year if now.month == 12 else now.year - 1, 12, 1, tzinfo=tz.utc)
     elif now.month in range(3, 6):
@@ -71,7 +72,9 @@ def start_season_time(now) -> dt:
 
 # Updates the playlist for a specific client
 # client: the client to update
-def update_playlist(client):
+
+
+def update_playlist(client: spotipy.Spotify):
     target_playlist = get_target_playlist(dt.now(tz=tz.utc), client)
     # in utc
     last_updated = get_newest_date_in_playlist(target_playlist, client)

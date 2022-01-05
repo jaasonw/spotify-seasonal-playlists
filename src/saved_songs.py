@@ -1,9 +1,10 @@
 from collections import deque
 from datetime import timezone as tz
 from datetime import datetime as dt
+import spotipy
 
 # returns a list of song ids
-def get_unadded_songs(dt_threshold, client) -> deque:
+def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify) -> deque:
     """
     finds all songs that were added past the last date
     """
