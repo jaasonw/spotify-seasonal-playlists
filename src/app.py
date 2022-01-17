@@ -41,6 +41,8 @@ def update_clients():
                         playlist.update_playlist(client)
                     except Exception as e:
                         log_error_to_database(user, e)
+                else:
+                    log_error_to_database(user, e)
             except Exception as e:
                 log_error_to_database(user, e)
 
