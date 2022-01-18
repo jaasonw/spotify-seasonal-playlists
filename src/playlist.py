@@ -1,4 +1,6 @@
+from logging import exception
 import spotipy
+from spotipy.exceptions import SpotifyException
 import constant
 import database
 from collections import deque
@@ -6,18 +8,21 @@ from datetime import datetime as dt
 from datetime import timezone as tz
 from saved_songs import get_unadded_songs
 
-# returns the season given a time
+
 def get_current_season(now: dt) -> str:
-    if now.month > 2 and now.month < 6: # MAR - MAY
+    """returns the season given a time"""
+    if now.month > 2 and now.month < 6:  # MAR - MAY
         return constant.SPRING
-    elif now.month > 5 and now.month < 9: # JUN - AUG
+    elif now.month > 5 and now.month < 9:  # JUN - AUG
         return constant.SUMMER
-    elif now.month > 8 and now.month < 12: # SEPT - NOV
+    elif now.month > 8 and now.month < 12:  # SEPT - NOV
         return constant.FALL
-    else: # DEC - FEB
-        return constant.WINTER     
+    else:  # DEC - FEB
+        return constant.WINTER
 
 # returns the playlist id based on date
+
+
 def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
     """
     ASSUMPTIONS: a user has no duplicate playlist names
@@ -25,10 +30,40 @@ def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
     Solution: no intuitive workaround
     """
     # december of 2019 looks for playlist "winter 2020"
-    target_playlist_name = get_current_season(date)+ " " + str(date.year if date.month != 12 else date.year+1)
+    target_playlist_name = get_current_season(
+        date) + " " + str(date.year if date.month != 12 else date.year+1)
     chunk, offset = 50, 0
     all_playlists = {}
-    while True: 
+
+    # Case 1: Playlist is cached and playlist is current season
+    #   Good, use it
+    # Case 2: Playlist is cached but playlist is out of season
+    #   Make a new playlist and cache it
+    # Case 3: Playlist isnt cached
+    #   Look for it
+
+    client_id = client.auth_manager.client_id
+
+    playlist_id = ""
+    try:
+        playlist_id = database.get_user(client_id)["last_playlist"]
+        # case 1
+        if client.playlist(playlist_id).name == target_playlist_name:
+            return playlist_id
+        # case 2
+        else:
+            resp = client.user_playlist_create(
+                client.me()['id'],
+                target_playlist_name,
+                public=False,
+                description='AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter'
+            )
+            return resp['id']
+    except KeyError as e:
+        # case 3: do nothing, it's not cached, hopefully this is rare
+        pass
+
+    while True:
         playlist_info = client.current_user_playlists(chunk, offset)
         for item in playlist_info['items']:
             all_playlists[item['name']] = item['id']
@@ -38,13 +73,19 @@ def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
             offset += chunk
 
     if target_playlist_name not in all_playlists:
-        resp = client.user_playlist_create(client.me()['id'], target_playlist_name, public=False, 
-            description='AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter')
+        resp = client.user_playlist_create(
+            client.me()['id'],
+            target_playlist_name,
+            public=False,
+            description='AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter'
+        )
         return resp['id']
     else:
         return all_playlists[target_playlist_name]
 
 # returns a datetime object of the most recently added song of a playlist
+
+
 def get_newest_date_in_playlist(pl_id: int, client: spotipy.Spotify):
     """    
     ASSUMPTIONS: the order of the songs in the playlist is in which the songs were added
@@ -57,10 +98,12 @@ def get_newest_date_in_playlist(pl_id: int, client: spotipy.Spotify):
         pl_id, fields="items, total", offset=songs['total']-1)
     return dt.strptime(last_song['items'][len(last_song['items']) - 1]['added_at'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=tz.utc)
 
-# given a datetime, return a dt of the start of the season
-# for e.g. if its winter 2020, return DEC 1, 2019 00:00 UTC
-# for e.g. if its spring 2020, return MAR 1, 2020 00:00 UTC
 def start_season_time(now: dt) -> dt:
+    """
+    given a datetime, return a dt of the start of the season
+    for e.g. if its winter 2020, return DEC 1, 2019 00:00 UTC
+    for e.g. if its spring 2020, return MAR 1, 2020 00:00 UTC
+    """
     if now.month in [12, 1, 2]:
         return dt(now.year if now.month == 12 else now.year - 1, 12, 1, tzinfo=tz.utc)
     elif now.month in range(3, 6):
