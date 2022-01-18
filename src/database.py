@@ -13,6 +13,8 @@ def database_connection():
 
 def get_user(id):
     with database_connection() as conn:
+        conn.row_factory = lambda c, r: dict(
+            [(col[0], r[idx]) for idx, col in enumerate(c.description)])
         cursor = conn.cursor()
         sql = 'SELECT * FROM Users WHERE id=?'
         cursor.execute(sql, (id,))
