@@ -34,9 +34,9 @@ def update_clients():
                 # reset the users error count if an update was successful
                 db.update_user(user, "error_count", 0)
             except SpotifyException as e:
-                # we hit a rate limit wait 30 seconds and retry
+                # we hit a rate limit wait 60 seconds and retry
                 if e.code == 429:
-                    time.sleep(30)
+                    time.sleep(60)
                     try:
                         playlist.update_playlist(client)
                     except Exception as e:
