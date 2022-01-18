@@ -46,7 +46,7 @@ def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
 
     playlist_id = ""
     try:
-        playlist_id = database.get_user(client_id)["last_playlist"]
+        playlist_id = database.get_field(client_id, "last_playlist")
         # case 1
         if client.playlist(playlist_id).name == target_playlist_name:
             return playlist_id
