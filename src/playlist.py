@@ -23,7 +23,7 @@ def get_current_season(now: dt) -> str:
 # returns the playlist id based on date
 
 
-def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
+def get_target_playlist(date: dt, client: spotipy.Spotify, user: str) -> str:
     """
     ASSUMPTIONS: a user has no duplicate playlist names
     In the case that a user has a duplicate playlist name, the script will modify the one 'lower' in the user's playlist library
@@ -42,13 +42,11 @@ def get_target_playlist(date: dt, client: spotipy.Spotify) -> str:
     # Case 3: Playlist isnt cached
     #   Look for it
 
-    client_id = client.auth_manager.client_id
-
     playlist_id = ""
     try:
-        playlist_id = database.get_field(client_id, "last_playlist")
+        playlist_id = database.get_field(user, "last_playlist")
         # case 1
-        if client.playlist(playlist_id).name == target_playlist_name:
+        if client.playlist(playlist_id)["name"] == target_playlist_name:
             return playlist_id
         # case 2
         else:
@@ -117,8 +115,8 @@ def start_season_time(now: dt) -> dt:
 # client: the client to update
 
 
-def update_playlist(client: spotipy.Spotify):
-    target_playlist = get_target_playlist(dt.now(tz=tz.utc), client)
+def update_playlist(client: spotipy.Spotify, user: str):
+    target_playlist = get_target_playlist(dt.now(tz=tz.utc), client, user)
     # in utc
     last_updated = get_newest_date_in_playlist(target_playlist, client)
     songs_to_be_added = get_unadded_songs(last_updated, client)

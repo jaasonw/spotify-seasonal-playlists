@@ -29,7 +29,7 @@ def update_clients():
             )
             try:
                 client = spotipy.Spotify(auth_manager=oauth)
-                playlist.update_playlist(client)
+                playlist.update_playlist(client, user)
 
                 # reset the users error count if an update was successful
                 db.update_user(user, "error_count", 0)

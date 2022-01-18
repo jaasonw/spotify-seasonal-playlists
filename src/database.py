@@ -102,7 +102,7 @@ def remove_user(id):
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
         if sys.argv[1] == "--test":
-            pass
+            print(get_field("fi14v4phgvmdiqk3g5t7cwsvz", "last_playlist"))
 
 
 
