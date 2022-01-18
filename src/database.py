@@ -67,7 +67,6 @@ def get_field(id, field):
 
 def increment_field(id, field):
     entry = get_field(id, field)
-    print(entry)
     update_user(id, field, entry + 1)
 
 
