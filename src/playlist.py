@@ -45,9 +45,8 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user: str) -> str:
     playlist_id = ""
     try:
         playlist_id = database.get_field(user, "last_playlist")
-        playlist = client.playlist(playlist_id)
         # case 1
-        if playlist != None and playlist["name"] == target_playlist_name:
+        if playlist_id != '' and client.playlist(playlist_id)["name"] == target_playlist_name:
             return playlist_id
         # case 2
         else:
@@ -96,6 +95,7 @@ def get_newest_date_in_playlist(pl_id: int, client: spotipy.Spotify):
     last_song = client.playlist_tracks(
         pl_id, fields="items, total", offset=songs['total']-1)
     return dt.strptime(last_song['items'][len(last_song['items']) - 1]['added_at'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=tz.utc)
+
 
 def start_season_time(now: dt) -> dt:
     """
