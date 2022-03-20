@@ -78,8 +78,8 @@ def add_user(id):
             update_user(id, "error_count", 0)
             update_user(id, "active", "")
         else:
-            sql = f'INSERT INTO Users(id) VALUES(?)'
-            cursor.execute(sql, (id,))
+            sql = f'INSERT INTO Users(id, update_count, error_count, last_playlist) VALUES(?)'
+            cursor.execute(sql, (id,0,0,'',))
             conn.commit()
 
 
