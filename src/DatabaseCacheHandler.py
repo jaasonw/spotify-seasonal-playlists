@@ -23,16 +23,26 @@ class DatabaseCacheHandler(CacheHandler):
         return req.json()["items"][0]
 
     def save_token_to_cache(self, token_info):
+        # check for existing token
         try:
-            token = pocketbase_auth()
             auth_token = self.get_cached_token()
-            record_id = auth_token["id"]
-            req = requests.patch(
-                f"{pocketbase_url}/api/collections/users/records/{record_id}",
+        except Exception:
+            # it doesnt exist, create it
+            token = pocketbase_auth()
+            req = requests.post(
+                f"{pocketbase_url}/api/collections/tokens/records",
                 headers={"Authorization": f"Bearer {token}"},
                 json=token_info,
             )
             req.raise_for_status()
-
-        except Exception as e:
-            print(f"Could not save token to db: ${e}")
+            return
+        
+        # it exists, update it
+        token = pocketbase_auth()
+        record_id = auth_token["id"]
+        req = requests.patch(
+            f"{pocketbase_url}/api/collections/tokens/records/{record_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            json=token_info,
+        )
+        req.raise_for_status()
