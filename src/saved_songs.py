@@ -1,7 +1,9 @@
 from collections import deque
-from datetime import timezone as tz
 from datetime import datetime as dt
+from datetime import timezone as tz
+
 import spotipy
+
 
 # returns a list of song ids
 def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify) -> deque:

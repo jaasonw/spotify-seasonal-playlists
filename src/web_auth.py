@@ -1,16 +1,14 @@
-import os
+import requests
+import spotipy
+from flask import Flask, redirect, render_template, request
+from spotipy.cache_handler import MemoryCacheHandler
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 import config
 import constant
 import database
-import requests
-import spotipy
-from config import frontend_url
 from DatabaseCacheHandler import DatabaseCacheHandler
-from flask import Flask, redirect, render_template, request, Response
 from playlist import update_playlist
-from spotipy.cache_handler import MemoryCacheHandler
-from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 auth_server = Flask(__name__)
 auth_server.debug = False

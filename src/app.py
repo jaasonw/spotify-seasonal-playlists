@@ -1,15 +1,13 @@
-from spotipy.exceptions import SpotifyException
-from DatabaseCacheHandler import DatabaseCacheHandler
+import sys
+import threading
+import traceback
+
 import config
 import constant
 import database as db
 import playlist
 import spotipy
-import sys
-import threading
-import traceback
-from datetime import datetime as dt, time
-from datetime import timezone as tz
+from DatabaseCacheHandler import DatabaseCacheHandler
 
 
 def update_clients():
@@ -64,10 +62,7 @@ def run(update_frequency: int):
     try:
         update_clients()
     except Exception as e:
-        print(e)
-        with open(constant.SRC_PATH + "/../error.log", "a") as f:
-            f.write(str(e))
-            f.write(traceback.format_exc())
+        log_error_to_database("SYSTEM", e)
 
 
 if __name__ == "__main__":

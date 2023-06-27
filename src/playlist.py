@@ -1,11 +1,10 @@
-from logging import exception
-import spotipy
-from spotipy.exceptions import SpotifyException
-import constant
-import database
-from collections import deque
 from datetime import datetime as dt
 from datetime import timezone as tz
+
+import spotipy
+
+import constant
+import database
 from saved_songs import get_unadded_songs
 
 
