@@ -29,6 +29,7 @@ class DatabaseCacheHandler(CacheHandler):
         except Exception:
             # it doesnt exist, create it
             token = pocketbase_auth()
+            token_info["user_id"] = self.username
             req = requests.post(
                 f"{pocketbase_url}/api/collections/tokens/records",
                 headers={"Authorization": f"Bearer {token}"},
