@@ -1,43 +1,38 @@
 from spotipy import CacheHandler
-import database as db
+import requests
+from database import pocketbase_auth
+from config import pocketbase_url
 
 
 class DatabaseCacheHandler(CacheHandler):
     """
-    Cache handler that uses the sqlite database for token data
+    Cache handler that uses pocketbase for token data
     """
 
     def __init__(self, username):
         self.username = username
 
     def get_cached_token(self):
-        with db.database_connection() as conn:
-            conn.row_factory = lambda c, r: dict(
-                [(col[0], r[idx]) for idx, col in enumerate(c.description)])
-            cursor = conn.cursor()
-            try:
-                cursor.execute(
-                    f'SELECT * FROM Tokens WHERE id=?', (self.username,))
-                tokenRow = cursor.fetchone()
-            except Exception as e:
-                print(f'Could not get token: ${e}')
-        return tokenRow
+        token = pocketbase_auth()
+        req = requests.get(
+            f"{pocketbase_url}/api/collections/tokens/records?filter=(user_id=%27{self.username}%27)",
+            params={"perPage": 1},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        req.raise_for_status()
+        return req.json()["items"][0]
 
     def save_token_to_cache(self, token_info):
-        with db.database_connection() as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute(
-                    f'DELETE FROM Tokens WHERE id=?', (self.username,))
-                cursor.execute('INSERT INTO Tokens VALUES (?,?,?,?,?,?,?)', (
-                    self.username,
-                    token_info["access_token"],
-                    token_info["token_type"],
-                    token_info["expires_in"],
-                    token_info["refresh_token"],
-                    token_info["scope"],
-                    token_info["expires_at"],
-                ))
-                conn.commit()
-            except Exception as e:
-                print(f'Could not save token to db: ${e}')
+        try:
+            token = pocketbase_auth()
+            auth_token = self.get_cached_token()
+            record_id = auth_token["id"]
+            req = requests.patch(
+                f"{pocketbase_url}/api/collections/users/records/{record_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json=token_info,
+            )
+            req.raise_for_status()
+
+        except Exception as e:
+            print(f"Could not save token to db: ${e}")

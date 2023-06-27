@@ -18,47 +18,37 @@ def update_clients():
     the cache
     """
     for user in db.get_users():
-        if db.get_field(user, "active") != "false":
-            print("updating", user)
-            oauth = spotipy.oauth2.SpotifyOAuth(
-                scope=constant.SCOPE,
-                cache_handler=DatabaseCacheHandler(user),
-                client_id=config.client_id,
-                client_secret=config.client_secret,
-                redirect_uri=config.redirect_uri
-            )
-            try:
-                client = spotipy.Spotify(auth_manager=oauth)
-                playlist.update_playlist(client, user)
+        if not user["active"]:
+            continue
+        print("updating", user["user_id"])
+        oauth = spotipy.oauth2.SpotifyOAuth(
+            scope=constant.SCOPE,
+            cache_handler=DatabaseCacheHandler(user["user_id"]),
+            client_id=config.client_id,
+            client_secret=config.client_secret,
+            redirect_uri=config.redirect_uri,
+        )
+        print(oauth.get_cached_token())
+        try:
+            client = spotipy.Spotify(auth_manager=oauth)
+            playlist.update_playlist(client, user)
 
-                # reset the users error count if an update was successful
-                db.update_user(user, "error_count", 0)
-            except SpotifyException as e:
-                # we hit a rate limit wait 60 seconds and retry
-                if e.code == 429:
-                    time.sleep(60)
-                    try:
-                        playlist.update_playlist(client)
-                    except Exception as e:
-                        log_error_to_database(user, e)
-                else:
-                    log_error_to_database(user, e)
-            except Exception as e:
-                log_error_to_database(user, e)
+            # reset the users error count if an update was successful
+            db.update_user(user["user_id"], "error_count", 0)
+        except Exception as e:
+            log_error_to_database(user["user_id"], e)
 
-                # if a user passes a certain error threshold, mark them as
-                # inactive, they probably revoked our access
-                if db.get_field(user, "error_count") > constant.ERROR_THRESHOLD:
-                    try:
-                        db.update_user(user, "active", "false")
-                    except Exception:
-                        print("Could not set user to inactive")
+            # if a user passes a certain error threshold, mark them as
+            # inactive, they probably revoked our access
+            if user["error_count"] > constant.ERROR_THRESHOLD:
+                try:
+                    db.update_user(user["user_id"], "active", "false")
+                except Exception:
+                    print("Could not set user to inactive")
 
 
 def log_error_to_database(user: str, e: Exception):
-    timestamp = dt.now(tz=tz.utc).strftime('%Y-%m-%d %H:%M:%S')
-    message = str(e)
-    message = timestamp + ": " + message
+    message = "".join(traceback.format_tb(e.__traceback__))
     db.increment_field(user, "error_count")
     db.add_error(user, message)
 
@@ -68,13 +58,14 @@ def run(update_frequency: int):
     Runs every n seconds on a separate thread
     update_frequency: how frequently to update in seconds
     """
-    threading.Timer(update_frequency, run, kwargs=dict(
-        update_frequency=update_frequency)).start()
+    threading.Timer(
+        update_frequency, run, kwargs=dict(update_frequency=update_frequency)
+    ).start()
     try:
         update_clients()
     except Exception as e:
         print(e)
-        with open(constant.SRC_PATH + '/../error.log', 'a') as f:
+        with open(constant.SRC_PATH + "/../error.log", "a") as f:
             f.write(str(e))
             f.write(traceback.format_exc())
 
@@ -87,12 +78,12 @@ if __name__ == "__main__":
     # update faster if we're using the debug environment
     run(10 if debug else constant.UPDATE_FREQUENCY)
 
-    # debug server
-    if debug:
-        from web_auth import auth_server
-        # run the server in a background thread
-        server_thread = threading.Thread(
-            target=auth_server.run,
-            kwargs=dict(port=config.port)
-        )
-        server_thread.run()
+    # # debug server
+    # if debug:
+    #     from web_auth import auth_server
+
+    #     # run the server in a background thread
+    #     server_thread = threading.Thread(
+    #         target=auth_server.run, kwargs=dict(port=config.port)
+    #     )
+    #     server_thread.run()

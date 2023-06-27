@@ -11,3 +11,6 @@ log.txt
 config.ini
 *.log
 *.db
+pb/
+.env
+.DS_Store

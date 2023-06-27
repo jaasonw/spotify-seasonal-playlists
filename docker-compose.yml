@@ -1,0 +1,49 @@
+services:
+  spotify-seasonal-backend:
+    build: .
+    container_name: spotify-seasonal-backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - pocketbase_url=http://spotify-seasonal-database:8090
+      - frontend_url=http://spotify-seasonal-frontend:3000
+  spotify-seasonal-database:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: spotify-seasonal-database
+    restart: unless-stopped
+    expose:
+      - 8090
+    ports:
+      - "8091:8090"
+    volumes:
+      - ./pb/pb_data:/pb_data
+      - ./pb/pb_public:/pb_public
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  spotify-seasonal-frontend:
+    build: ./frontend
+    container_name: spotify-seasonal-frontend
+    expose:
+      - 3000
+    ports:
+      - "3000:3000"
+    environment:
+      - pocketbase_url=http://spotify-seasonal-database:8090
+    restart: unless-stopped
+  # spotify-seasonal-proxy:
+  #   image: caddy:latest
+  #   container_name: spotify-seasonal-proxy
+  #   ports:
+  #     - "80:80"
+  #     # - "443:443"
+  #   # command: >
+  #   #   caddy reverse-proxy --from http://localhost --to http://spotify-seasonal-frontend:3000
+  #   # command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile
