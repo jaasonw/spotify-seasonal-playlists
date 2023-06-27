@@ -1,13 +1,16 @@
-from spotipy.cache_handler import MemoryCacheHandler
+import os
+
 import config
 import constant
 import database
+import requests
 import spotipy
-import os
-from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
-from flask import Flask, redirect, request, render_template
-from playlist import update_playlist
+from config import frontend_url
 from DatabaseCacheHandler import DatabaseCacheHandler
+from flask import Flask, redirect, render_template, request, Response
+from playlist import update_playlist
+from spotipy.cache_handler import MemoryCacheHandler
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
 auth_server = Flask(__name__)
 auth_server.debug = False
@@ -18,7 +21,7 @@ def frontpage():
     return render_template("index.html", url=config.redirect_uri)
 
 
-@auth_server.route('/login')
+@auth_server.route("/login")
 def auth_page():
     # hacky way to store token in database
     # 1. use a MemoryCacheHandler to temporarily store token in ram
@@ -31,10 +34,10 @@ def auth_page():
         cache_handler=tokenData,
         client_id=config.client_id,
         client_secret=config.client_secret,
-        redirect_uri=config.redirect_uri + "/login"
+        redirect_uri=config.redirect_uri + "/login",
     )
     # ask the user for authorization here
-    if ("code" not in request.args):
+    if "code" not in request.args:
         return redirect(oauth.get_authorize_url())
     else:
         # TODO: backend logic probably doesn't belong here
@@ -49,21 +52,22 @@ def auth_page():
 
         # hacky database caching
         client = spotipy.Spotify(auth_manager=oauth)
-        user = client.me()['id']
+        user = client.me()["id"]
         # create and store user in the Users table
-        database.add_user(client.me()['id'])
+        database.add_user(client.me()["id"])
         # transfer data from MemoryCacheHandler to DatabaseCacheHandler
         db = DatabaseCacheHandler(user)
         db.save_token_to_cache(tokenData.get_cached_token())
 
         # create new playlist for user
-        update_playlist(client)
+        user = database.get_user(user)
+        update_playlist(client, user)
 
         return render_template("auth_success.html")
     return render_template("auth_success.html")
 
 
-@auth_server.route('/logout')
+@auth_server.route("/logout")
 def logout_page():
     return "work in progress, come back later!"
     # oauth = SpotifyOAuth(
@@ -99,6 +103,6 @@ def logout_page():
     #     return logout_page
 
 
-@auth_server.route('/check_status')
+@auth_server.route("/check_status")
 def status_check():
     return "work in progress, come back later!"
