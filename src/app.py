@@ -7,6 +7,7 @@ import constant
 import database as db
 import playlist
 import spotipy
+import logging
 from DatabaseCacheHandler import DatabaseCacheHandler
 
 
@@ -18,7 +19,7 @@ def update_clients():
     for user in db.get_users():
         if not user["active"]:
             continue
-        print("updating", user["user_id"])
+        logging.debug("Updating", user["user_id"])
         oauth = spotipy.oauth2.SpotifyOAuth(
             scope=constant.SCOPE,
             cache_handler=DatabaseCacheHandler(user["user_id"]),
@@ -26,7 +27,6 @@ def update_clients():
             client_secret=config.client_secret,
             redirect_uri=config.redirect_uri,
         )
-        print(oauth.get_cached_token())
         try:
             client = spotipy.Spotify(auth_manager=oauth)
             playlist.update_playlist(client, user)
@@ -42,7 +42,7 @@ def update_clients():
                 try:
                     db.update_user(user["user_id"], "active", "false")
                 except Exception:
-                    print("Could not set user to inactive")
+                    logging.error("Could not set user to inactive")
 
 
 def log_error_to_database(user: str, e: Exception):

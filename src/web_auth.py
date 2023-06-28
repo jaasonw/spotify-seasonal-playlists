@@ -40,7 +40,6 @@ def auth_page():
     else:
         # TODO: backend logic probably doesn't belong here
         # we got the code here, use it to create a token
-        print("Response Code: " + request.args["code"])
         try:
             # called for no reason other than to trigger a save_token_to_cache()
             # call inside the cache handler
@@ -81,7 +80,6 @@ def logout_page():
     #     return redirect(oauth.get_authorize_url())
     # else:
     #     logout_page = render_template("logout_sucess.html")
-    #     print("Response Code: " + request.args["code"])
     #     try:
     #         token = oauth.get_access_token(request.args["code"], as_dict=False)
     #     except SpotifyOauthError:

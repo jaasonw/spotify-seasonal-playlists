@@ -136,24 +136,21 @@ def update_playlist(client: spotipy.Spotify, user):
 
     database.update_user(client.me()["id"], "last_playlist", target_playlist)
     if len(songs_to_be_added) < 1:
-        # print("No songs to be added for", client.me()['id'])
-        pass
-    else:
-        timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
-        # print(timestamp + ": Adding " + str(len(songs_to_be_added)) + " songs for", client.me()['id'])
-        database.update_user(client.me()["id"], "last_update", timestamp)
-        database.increment_field(client.me()["id"], "update_count")
+        return
+    timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
+    database.update_user(client.me()["id"], "last_update", timestamp)
+    database.increment_field(client.me()["id"], "update_count")
 
-        # we can only add 100 songs at a time, place all the songs in a queue
-        # and dequeue into a chunk 100 songs at a time
-        chunk = []
-        while songs_to_be_added:
-            chunk.append(songs_to_be_added.popleft())
-            if len(chunk) == 100:
-                client.user_playlist_add_tracks(
-                    client.me()["id"], target_playlist, chunk
-                )
-                chunk.clear()
-        # if the chunk isn't completely filled then add the rest of the songs
-        if len(chunk) > 0:
-            client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
+    # we can only add 100 songs at a time, place all the songs in a queue
+    # and dequeue into a chunk 100 songs at a time
+    chunk = []
+    while songs_to_be_added:
+        chunk.append(songs_to_be_added.popleft())
+        if len(chunk) == 100:
+            client.user_playlist_add_tracks(
+                client.me()["id"], target_playlist, chunk
+            )
+            chunk.clear()
+    # if the chunk isn't completely filled then add the rest of the songs
+    if len(chunk) > 0:
+        client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
