@@ -1,5 +1,5 @@
 import requests
-from config import pocketbase_url, pocketbase_username, pocketbase_password
+from backend.config import pocketbase_url, pocketbase_username, pocketbase_password
 
 
 def pocketbase_auth():
