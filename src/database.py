@@ -70,7 +70,7 @@ def add_user(id):
     req.raise_for_status()
 
 
-def add_error(id, error):
+def add_error(id, error, traceback):
     token = pocketbase_auth()
     req = requests.post(
         f"{pocketbase_url}/api/collections/errors/records",
@@ -78,6 +78,7 @@ def add_error(id, error):
         json={
             "user_id": id,
             "error": error,
+            "traceback": traceback,
         },
     )
     req.raise_for_status()

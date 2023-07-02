@@ -1,6 +1,6 @@
 import sys
 import threading
-import traceback
+import traceback as tb
 
 import config
 import constant
@@ -46,9 +46,10 @@ def update_clients():
 
 
 def log_error_to_database(user: str, e: Exception):
-    message = "".join(traceback.format_tb(e.__traceback__))
-    db.increment_field(user, "error_count")
-    db.add_error(user, message)
+    traceback = "".join(tb.format_tb(e.__traceback__))
+    if user != "SYSTEM":
+        db.increment_field(user, "error_count")
+    db.add_error(user, error=str(e), traceback=traceback)
 
 
 def run(update_frequency: int):
