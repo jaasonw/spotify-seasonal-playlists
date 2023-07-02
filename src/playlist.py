@@ -130,7 +130,7 @@ def update_playlist(client: spotipy.Spotify, user):
     # in utc
     # last_updated = get_newest_date_in_playlist(target_playlist, client)
     last_updated = (
-        user["last_update"]
+        dt.strptime(user["last_update"]).replace(tzinfo=tz.utc)
         if user["last_update"] != ""
         else start_season_time(dt.now(tz=tz.utc))
     )
