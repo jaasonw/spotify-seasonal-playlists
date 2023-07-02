@@ -14,9 +14,24 @@ auth_server = Flask(__name__)
 auth_server.debug = False
 
 
-@auth_server.route('/')
+@auth_server.route("/")
 def frontpage():
     return render_template("index.html", url=config.redirect_uri)
+
+
+@auth_server.route("/init")
+def init_user():
+    id = request.args.get("id")
+    user = database.get_user(id)
+    oauth = SpotifyOAuth(
+        scope=constant.SCOPE,
+        cache_handler=DatabaseCacheHandler(id),
+        client_id=config.client_id,
+        client_secret=config.client_secret,
+        redirect_uri=config.redirect_uri + "/login",
+    )
+    client = spotipy.Spotify(auth_manager=oauth)
+    update_playlist(client, user)
 
 
 @auth_server.route("/login")

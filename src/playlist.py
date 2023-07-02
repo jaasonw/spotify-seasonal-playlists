@@ -20,11 +20,20 @@ def get_current_season(now: dt) -> str:
         return constant.WINTER
 
 
-# returns the playlist id based on date
+def create_playlist(client: spotipy.Spotify, playlist_name: str) -> str:
+    resp = client.user_playlist_create(
+        client.me()["id"],
+        playlist_name,
+        public=False,
+        description="AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter",
+    )
+    return resp["id"]
 
 
 def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
     """
+    Returns the playlist id based on date
+
     ASSUMPTIONS: a user has no duplicate playlist names
     In the case that a user has a duplicate playlist name, the script will modify the one 'lower' in the user's playlist library
     Solution: no intuitive workaround
@@ -56,13 +65,7 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
             return playlist_id
         # case 2
         else:
-            resp = client.user_playlist_create(
-                client.me()["id"],
-                target_playlist_name,
-                public=False,
-                description="AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter",
-            )
-            return resp["id"]
+            return create_playlist(client, target_playlist_name)
     except KeyError as e:
         # case 3: do nothing, it's not cached, hopefully this is rare
         pass
@@ -77,13 +80,7 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
             offset += chunk
 
     if target_playlist_name not in all_playlists:
-        resp = client.user_playlist_create(
-            client.me()["id"],
-            target_playlist_name,
-            public=False,
-            description="AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter",
-        )
-        return resp["id"]
+        return create_playlist(client, target_playlist_name)
     else:
         return all_playlists[target_playlist_name]
 
@@ -131,15 +128,20 @@ def start_season_time(now: dt) -> dt:
 def update_playlist(client: spotipy.Spotify, user):
     target_playlist = get_target_playlist(dt.now(tz=tz.utc), client, user)
     # in utc
-    last_updated = get_newest_date_in_playlist(target_playlist, client)
+    # last_updated = get_newest_date_in_playlist(target_playlist, client)
+    last_updated = (
+        user["last_update"]
+        if user["last_update"] != ""
+        else start_season_time(dt.now(tz=tz.utc))
+    )
     songs_to_be_added = get_unadded_songs(last_updated, client)
 
-    database.update_user(client.me()["id"], "last_playlist", target_playlist)
+    database.update_user(user["user_id"], "last_playlist", target_playlist)
     if len(songs_to_be_added) < 1:
         return
     timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    database.update_user(client.me()["id"], "last_update", timestamp)
-    database.increment_field(client.me()["id"], "update_count")
+    database.update_user(user["user_id"], "last_update", timestamp)
+    database.increment_field(user["user_id"], "update_count")
 
     # we can only add 100 songs at a time, place all the songs in a queue
     # and dequeue into a chunk 100 songs at a time
@@ -147,9 +149,7 @@ def update_playlist(client: spotipy.Spotify, user):
     while songs_to_be_added:
         chunk.append(songs_to_be_added.popleft())
         if len(chunk) == 100:
-            client.user_playlist_add_tracks(
-                client.me()["id"], target_playlist, chunk
-            )
+            client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
             chunk.clear()
     # if the chunk isn't completely filled then add the rest of the songs
     if len(chunk) > 0:
