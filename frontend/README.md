@@ -1,3 +1,3 @@
-# title
+# spotify-seasonal-frontend
 
-u forgor to put something in the readme u dingus
+it's the frontend for spotify-seasonal, what more do you want me to say?
