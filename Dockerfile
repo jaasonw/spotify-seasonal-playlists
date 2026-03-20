@@ -1,4 +1,4 @@
-FROM python:3.11.4-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Production stage
-FROM python:3.11.4-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
