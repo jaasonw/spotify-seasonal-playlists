@@ -16,7 +16,7 @@ redis==5.0.8
 gunicorn==23.0.0
 
 # Spotify API
-spotipy>=2.23.0
+spotipy==2.26.0
 
 # Flask dependencies
 blinker==1.9.0
