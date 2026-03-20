@@ -13,7 +13,7 @@ services:
       - pocketbase_url=http://spotify-seasonal-database:8090
       - frontend_url=http://spotify-seasonal-frontend:3000
   spotify-seasonal-database:
-    image: ghcr.io/muchobien/pocketbase:latest
+    image: ghcr.io/muchobien/pocketbase:0.22.32
     container_name: spotify-seasonal-database
     restart: unless-stopped
     expose:

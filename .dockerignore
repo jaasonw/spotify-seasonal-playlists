@@ -1,1 +1,48 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.env.example
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+README.md
+*.md
+
+# Local data
+pb/
+pb_data/
+pb_public/
+requirements.txt.backup
+
+# Frontend (already there)
 frontend/
+
+# Misc
+*.log
+.DS_Store
+.dockerignore
+Dockerfile
+docker-compose.yml
