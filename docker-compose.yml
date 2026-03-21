@@ -27,15 +27,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  # spotify-seasonal-frontend removed - now served directly by Flask backend
-  # spotify-seasonal-proxy:
-  #   image: caddy:latest
-  #   container_name: spotify-seasonal-proxy
-  #   ports:
-  #     - "80:80"
-  #     # - "443:443"
-  #   # command: >
-  #   #   caddy reverse-proxy --from http://localhost --to http://spotify-seasonal-frontend:3000
-  #   # command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile
