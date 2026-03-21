@@ -83,16 +83,31 @@
 
             <div class="card mt-4">
                 <div class="card-body">
+                    <h5 class="card-title">Your Playlists</h5>
+                    <p class="card-text">View your automatically created seasonal playlists on Spotify.</p>
+                    {% if user.last_playlist %}
+                        <a href="https://open.spotify.com/playlist/{{ user.last_playlist }}" target="_blank" class="btn btn-success">
+                            Open Latest Playlist
+                        </a>
+                    {% endif %}
+                    <a href="https://open.spotify.com/collection/playlists" target="_blank" class="btn btn-outline-primary {{ 'ml-2' if user.last_playlist }}">
+                        View All Playlists
+                    </a>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-body">
                     <h5 class="card-title">Account Management</h5>
                     <p class="card-text">Unlink your Spotify account and stop automatic playlist updates.</p>
-                    <form action="/unregister" method="POST" onsubmit="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in again.');">
+                    <form action="{{ url_prefix }}/unregister" method="POST" onsubmit="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in again.');">
                         <button type="submit" class="btn btn-danger">Deactivate Account</button>
                     </form>
                 </div>
             </div>
 
             <div class="mt-4 text-center">
-                <a href="{{ url }}/logout" class="btn btn-outline-secondary">Logout</a>
+                <a href="{{ url_prefix }}/logout" class="btn btn-outline-secondary">Logout</a>
             </div>
         </div>
 
