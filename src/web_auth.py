@@ -17,12 +17,18 @@ auth_server.debug = False
 auth_server.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 
+@auth_server.context_processor
+def inject_url_prefix():
+    """Inject URL prefix into all templates"""
+    return dict(url_prefix=config.url_prefix)
+
+
 def login_required(f):
     """Decorator to require login for a route"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect('/login')
+            return redirect(config.url_prefix + '/login')
         return f(*args, **kwargs)
     return decorated_function
 
@@ -32,7 +38,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect('/login')
+            return redirect(config.url_prefix + '/login')
         try:
             user = database.get_user(session['user_id'])
             if not user.get('is_admin', False):
@@ -107,7 +113,7 @@ def auth_page():
         # Store user_id in session
         session['user_id'] = user['user_id']
 
-        return redirect('/dashboard')
+        return redirect(config.url_prefix + '/dashboard')
     return render_template("auth_success.html")
 
 
@@ -115,7 +121,7 @@ def auth_page():
 def logout_page():
     """Clear session and log out user"""
     session.clear()
-    return redirect('/')
+    return redirect(config.url_prefix + '/')
 
 
 @auth_server.route("/dashboard")
@@ -137,10 +143,10 @@ def unregister():
         database.update_user(session['user_id'], "active", False)
         flash("Your account has been deactivated. You can reactivate by logging in again.", "success")
         session.clear()
-        return redirect('/')
+        return redirect(config.url_prefix + '/')
     except Exception as e:
         flash(f"Error deactivating account: {str(e)}", "error")
-        return redirect('/dashboard')
+        return redirect(config.url_prefix + '/dashboard')
 
 
 @auth_server.route("/admin")
@@ -161,7 +167,7 @@ def admin_toggle_user():
     user_id = request.form.get('user_id')
     if not user_id:
         flash("User ID required", "error")
-        return redirect('/admin')
+        return redirect(config.url_prefix + '/admin')
     
     try:
         user = database.get_user(user_id)
@@ -172,7 +178,7 @@ def admin_toggle_user():
     except Exception as e:
         flash(f"Error toggling user: {str(e)}", "error")
     
-    return redirect('/admin')
+    return redirect(config.url_prefix + '/admin')
 
 
 @auth_server.route("/admin/errors")
