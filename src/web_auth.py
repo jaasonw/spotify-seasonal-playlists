@@ -61,6 +61,7 @@ def init_user():
     )
     client = spotipy.Spotify(auth_manager=oauth)
     update_playlist(client, user)
+    return "OK", 200
 
 
 @auth_server.route("/login")
@@ -93,15 +94,14 @@ def auth_page():
 
         # hacky database caching
         client = spotipy.Spotify(auth_manager=oauth)
-        user = client.me()["id"]
-        # create and store user in the Users table
-        database.add_user(client.me()["id"])
+        user_id = client.me()["id"]
+        # create user if they don't exist, or get existing user
+        user = database.get_or_create_user(user_id)
         # transfer data from MemoryCacheHandler to DatabaseCacheHandler
-        db = DatabaseCacheHandler(user)
+        db = DatabaseCacheHandler(user_id)
         db.save_token_to_cache(tokenData.get_cached_token())
 
         # create new playlist for user
-        user = database.get_user(user)
         update_playlist(client, user)
 
         # Store user_id in session

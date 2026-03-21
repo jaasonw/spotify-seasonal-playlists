@@ -52,22 +52,33 @@ def increment_field(id, field):
     update_user(id, field, entry + 1)
 
 
-def add_user(id):
-    token = pocketbase_auth()
-    req = requests.post(
-        f"{pocketbase_url}/api/collections/users/records",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "user_id": id,
-            "update_count": 0,
-            "error_count": 0,
-            "last_error": "",
-            "last_playlist": "",
-            "last_update": "",
-            "active": True,
-        },
-    )
-    req.raise_for_status()
+def get_or_create_user(id):
+    """Get user if exists, create if not. Returns the user record."""
+    try:
+        user = get_user(id)
+        # Reactivate if they're logging in again after deactivating
+        if not user.get("active", True):
+            update_user(id, "active", True)
+            return get_user(id)
+        return user
+    except (IndexError, KeyError):
+        # User doesn't exist, create them
+        token = pocketbase_auth()
+        req = requests.post(
+            f"{pocketbase_url}/api/collections/users/records",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "user_id": id,
+                "update_count": 0,
+                "error_count": 0,
+                "last_error": "",
+                "last_playlist": "",
+                "last_update": "",
+                "active": True,
+            },
+        )
+        req.raise_for_status()
+        return get_user(id)
 
 
 def add_error(id, error, traceback):
