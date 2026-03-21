@@ -89,7 +89,7 @@
                                     <td>{{ user.last_update or 'Never' }}</td>
                                     <td>{{ user.last_playlist or 'N/A' }}</td>
                                     <td>
-                                        <form action="/admin/toggle-user" method="POST" style="display: inline;">
+                                        <form action="{{ url_prefix }}/admin/toggle-user" method="POST" style="display: inline;">
                                             <input type="hidden" name="user_id" value="{{ user.user_id }}">
                                             <button type="submit" class="btn btn-sm {{ 'btn-warning' if user.active else 'btn-success' }}">
                                                 {{ 'Deactivate' if user.active else 'Activate' }}
