@@ -1,13 +1,31 @@
 import requests
+import time
 from config import pocketbase_url, pocketbase_username, pocketbase_password
+
+# Cache for PocketBase token
+_pb_token = None
+_pb_token_expiry = 0
+TOKEN_LIFETIME = 3600  # 1 hour in seconds
 
 
 def pocketbase_auth():
+    global _pb_token, _pb_token_expiry
+    
+    # Return cached token if still valid (with 60s buffer)
+    if _pb_token and time.time() < _pb_token_expiry - 60:
+        return _pb_token
+        
     req = requests.post(
         f"{pocketbase_url}/api/admins/auth-with-password",
         json={"identity": pocketbase_username, "password": pocketbase_password},
     )
-    return req.json()["token"]
+    req.raise_for_status()
+    _pb_token = req.json()["token"]
+    # PocketBase tokens are usually valid for 14 days, but let's refresh hourly to be safe
+    # and avoid checking "exp" claim decoding complexity
+    _pb_token_expiry = time.time() + TOKEN_LIFETIME
+    
+    return _pb_token
 
 
 def get_user(id):
@@ -34,10 +52,16 @@ def get_users():
     return req.json()["items"]
 
 
-def update_user(id, field, value):
+def update_user(id, field, value, user_record=None):
     token = pocketbase_auth()
-    user = get_user(id)
-    record_id = user["id"]
+    
+    # Use provided record if available to avoid extra fetch
+    if user_record:
+        record_id = user_record["id"]
+    else:
+        user = get_user(id)
+        record_id = user["id"]
+        
     req = requests.patch(
         f"{pocketbase_url}/api/collections/users/records/{record_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -48,8 +72,8 @@ def update_user(id, field, value):
 
 def increment_field(id, field):
     user = get_user(id)
-    entry = user[field]
-    update_user(id, field, entry + 1)
+    entry = user.get(field, 0)  # Default to 0 if field missing
+    update_user(id, field, entry + 1, user_record=user)
 
 
 def get_or_create_user(id):
@@ -58,8 +82,9 @@ def get_or_create_user(id):
         user = get_user(id)
         # Reactivate if they're logging in again after deactivating
         if not user.get("active", True):
-            update_user(id, "active", True)
-            return get_user(id)
+            update_user(id, "active", True, user_record=user)
+            user["active"] = True  # Update local object
+            return user
         return user
     except (IndexError, KeyError):
         # User doesn't exist, create them
