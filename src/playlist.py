@@ -25,7 +25,7 @@ def create_playlist(client: spotipy.Spotify, playlist_name: str) -> str:
         client.me()["id"],
         playlist_name,
         public=False,
-        description="AUTOMATED PLAYLIST - https://github.com/turrence/spotify-new-music-sorter",
+        description="AUTOMATED PLAYLIST - https://physicsbirds.com/spotify",
     )
     return resp["id"]
 
