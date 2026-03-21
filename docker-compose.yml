@@ -18,7 +18,7 @@ services:
         max-file: "3"
         compress: "true"
   spotify-seasonal-database:
-    image: ghcr.io/muchobien/pocketbase:latest
+    image: ghcr.io/muchobien/pocketbase:0.36.7
     container_name: spotify-seasonal-database
     restart: unless-stopped
     expose:
