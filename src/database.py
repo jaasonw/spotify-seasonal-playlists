@@ -52,6 +52,66 @@ def get_users():
     return req.json()["items"]
 
 
+def get_users_needing_update(update_frequency=300, limit=10):
+    """
+    Get active users who haven't been updated recently.
+    Returns list of users sorted by last_update (oldest first).
+    """
+    token = pocketbase_auth()
+    
+    # We fetch active users and filter in Python for robustness with date formats
+    # This is fine for < 500 users. For larger scale, we'd use PocketBase filtering.
+    try:
+        req = requests.get(
+            f"{pocketbase_url}/api/collections/users/records",
+            # We filter for active users directly in PocketBase if possible
+            # PB filter syntax: filter=(active=true)
+            params={
+                "perPage": 500,
+                "filter": "active=true",
+                "sort": "updated", 
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        req.raise_for_status()
+        all_active_users = req.json()["items"]
+    except Exception:
+        # Fallback to getting all users if filter fails
+        all_active_users = [u for u in get_users() if u.get("active")]
+
+    # Calculate cutoff time (UTC)
+    cutoff_time = dt.now(tz=tz.utc) - timedelta(seconds=update_frequency)
+    stale_users = []
+    
+    for user in all_active_users:
+        last_update_str = user.get("last_update", "")
+        
+        # If never updated, it's stale
+        if not last_update_str:
+            stale_users.append(user)
+            continue
+            
+        try:
+            # Parse "YYYY-MM-DD HH:MM:SS"
+            # We assume stored time is naive and treat it as UTC
+            last_update = dt.strptime(last_update_str, "%Y-%m-%d %H:%M:%S")
+            # Force UTC if naive to match cutoff_time
+            if not last_update.tzinfo:
+                last_update = last_update.replace(tzinfo=tz.utc)
+                
+            if last_update < cutoff_time:
+                stale_users.append(user)
+        except ValueError:
+            # If date parsing fails, treat as stale to fix it
+            stale_users.append(user)
+            
+    # Sort by last_update string (lexicographical sort works for ISO-like dates)
+    # Empty strings come first
+    stale_users.sort(key=lambda u: u.get("last_update", ""))
+    
+    return stale_users[:limit]
+
+
 def update_user(id, field, value, user_record=None):
     token = pocketbase_auth()
     
