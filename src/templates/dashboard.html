@@ -84,7 +84,6 @@
             <div class="card mt-4">
                 <div class="card-body">
                     <h5 class="card-title">Your Playlists</h5>
-                    <p class="card-text">View your automatically created seasonal playlists on Spotify.</p>
                     {% if user.last_playlist %}
                         <a href="https://open.spotify.com/playlist/{{ user.last_playlist }}" target="_blank" class="btn btn-success">
                             Open Latest Playlist
