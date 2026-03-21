@@ -18,7 +18,7 @@ def pocketbase_auth():
         return _pb_token
         
     req = requests.post(
-        f"{pocketbase_url}/api/admins/auth-with-password",
+        f"{pocketbase_url}/api/collections/_superusers/auth-with-password",
         json={"identity": pocketbase_username, "password": pocketbase_password},
     )
     req.raise_for_status()
