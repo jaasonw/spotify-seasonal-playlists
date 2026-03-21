@@ -136,11 +136,13 @@ def update_playlist(client: spotipy.Spotify, user):
     )
     songs_to_be_added = get_unadded_songs(last_updated, client)
 
-    database.update_user(user["user_id"], "last_playlist", target_playlist)
+    database.update_user(
+        user["user_id"], "last_playlist", target_playlist, user_record=user
+    )
     if len(songs_to_be_added) < 1:
         return
     timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    database.update_user(user["user_id"], "last_update", timestamp)
+    database.update_user(user["user_id"], "last_update", timestamp, user_record=user)
     database.increment_field(user["user_id"], "update_count")
 
     # we can only add 100 songs at a time, place all the songs in a queue

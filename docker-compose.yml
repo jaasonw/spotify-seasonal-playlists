@@ -11,9 +11,14 @@ services:
       - .env
     environment:
       - pocketbase_url=http://spotify-seasonal-database:8090
-      - frontend_url=http://spotify-seasonal-frontend:3000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
   spotify-seasonal-database:
-    image: ghcr.io/muchobien/pocketbase:0.22.32
+    image: ghcr.io/muchobien/pocketbase:0.36.7
     container_name: spotify-seasonal-database
     restart: unless-stopped
     expose:
@@ -26,27 +31,11 @@ services:
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
       interval: 5s
-      timeout: 5s
+      timeout:  5s
       retries: 5
-  spotify-seasonal-frontend:
-    build: ./frontend
-    container_name: spotify-seasonal-frontend
-    expose:
-      - 3000
-    ports:
-      - "127.0.0.1:8092:3000"
-    environment:
-      - pocketbase_url=http://spotify-seasonal-database:8090
-      - backend_url=http://spotify-seasonal-backend:8080
-    restart: unless-stopped
-  # spotify-seasonal-proxy:
-  #   image: caddy:latest
-  #   container_name: spotify-seasonal-proxy
-  #   ports:
-  #     - "80:80"
-  #     # - "443:443"
-  #   # command: >
-  #   #   caddy reverse-proxy --from http://localhost --to http://spotify-seasonal-frontend:3000
-  #   # command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
