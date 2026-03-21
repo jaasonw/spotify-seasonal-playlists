@@ -69,27 +69,36 @@ def run_worker_loop(update_frequency: int):
                 # Update heartbeat - we are alive
                 db.update_heartbeat("worker", "running", "Checking for users...")
                 
-                # Fetch batch of users needing update
+                # Dynamic pacing: Calculate sleep time to spread updates evenly
+                total_users = db.get_active_user_count()
+                sleep_interval = 10  # Default if no users
+                
+                if total_users > 0:
+                    # Spread updates over the update frequency period
+                    # e.g., 30 users / 300s = 1 user every 10s
+                    sleep_interval = max(1, update_frequency / total_users)
+                
+                # Fetch ONE user needing update
                 stale_users = db.get_users_needing_update(
                     update_frequency=update_frequency, 
-                    limit=constant.BATCH_SIZE
+                    limit=1
                 )
                 
                 if not stale_users:
-                    # No work to do, sleep for a bit
+                    # No work to do, sleep for a bit (but not too long)
                     db.update_heartbeat("worker", "idle", "No users needing update")
                     time.sleep(10)
                     continue
                 
-                logging.info(f"Found {len(stale_users)} users to update")
-                db.update_heartbeat("worker", "processing", f"Updating {len(stale_users)} users")
+                user = stale_users[0]
+                logging.info(f"Processing user {user['user_id']} (Total: {total_users}, Interval: {sleep_interval:.2f}s)")
+                db.update_heartbeat("worker", "processing", f"Updating {user['user_id']}")
                 
-                # Process batch concurrently
-                futures = [executor.submit(update_single_user, user) for user in stale_users]
+                # Submit task to thread pool (non-blocking)
+                executor.submit(update_single_user, user)
                 
-                # Wait for all tasks in the batch to complete
-                for future in futures:
-                    future.result()
+                # Sleep to pace the next update
+                time.sleep(sleep_interval)
                     
             except Exception as e:
                 log_error_to_database("SYSTEM", e)

@@ -54,7 +54,28 @@ def get_users():
     return req.json()["items"]
 
 
-def get_users_needing_update(update_frequency=300, limit=10):
+def get_active_user_count():
+    """
+    Get the total number of active users.
+    """
+    token = pocketbase_auth()
+    try:
+        req = requests.get(
+            f"{pocketbase_url}/api/collections/users/records",
+            params={
+                "perPage": 1,
+                "filter": "active=true",
+                "fields": "id",  # Optimize: only fetch ID
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        req.raise_for_status()
+        return req.json()["totalItems"]
+    except Exception:
+        return 0
+
+
+def get_users_needing_update(update_frequency=300, limit=1):
     """
     Get active users who haven't been updated recently.
     Returns list of users sorted by last_update (oldest first).
