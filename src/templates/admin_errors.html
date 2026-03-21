@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <title>Error Log - Spotify Seasonal Playlist Creator</title>
+        <style>
+            .admin-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+            .navbar-brand { font-weight: bold; }
+            .error-card { margin-bottom: 1rem; }
+            .error-traceback { 
+                background-color: #f8f9fa; 
+                padding: 1rem; 
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 0.85rem;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="/">Spotify Seasonal Playlists</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Admin Panel</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/admin/errors">Error Log</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="admin-container">
+            <h1 class="mb-4">Error Log</h1>
+            <p class="text-muted">Showing last 50 errors</p>
+
+            {% if errors %}
+                {% for error in errors %}
+                <div class="card error-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>User:</strong> {{ error.user_id or 'SYSTEM' }}
+                        </span>
+                        <span class="text-muted">{{ error.created or 'Unknown date' }}</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Error Message</h6>
+                        <p class="card-text">{{ error.error }}</p>
+                        
+                        {% if error.traceback %}
+                        <h6 class="card-subtitle mb-2 text-muted">Traceback</h6>
+                        <div class="error-traceback">
+                            <pre>{{ error.traceback }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    No errors found! Everything is running smoothly.
+                </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="/admin" class="btn btn-secondary">Back to Admin Panel</a>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    </body>
+</html>

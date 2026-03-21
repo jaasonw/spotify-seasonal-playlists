@@ -1,6 +1,8 @@
+import os
 import requests
 import spotipy
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, session, flash
+from functools import wraps
 from spotipy.cache_handler import MemoryCacheHandler
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
@@ -12,6 +14,33 @@ from playlist import update_playlist
 
 auth_server = Flask(__name__)
 auth_server.debug = False
+auth_server.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
+
+
+def login_required(f):
+    """Decorator to require login for a route"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def admin_required(f):
+    """Decorator to require admin privileges for a route"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect('/login')
+        try:
+            user = database.get_user(session['user_id'])
+            if not user.get('is_admin', False):
+                return "Access denied: Admin privileges required", 403
+        except Exception as e:
+            return f"Error checking admin status: {str(e)}", 500
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @auth_server.route("/")
@@ -75,43 +104,86 @@ def auth_page():
         user = database.get_user(user)
         update_playlist(client, user)
 
-        return render_template("auth_success.html")
+        # Store user_id in session
+        session['user_id'] = user['user_id']
+
+        return redirect('/dashboard')
     return render_template("auth_success.html")
 
 
 @auth_server.route("/logout")
 def logout_page():
-    return "work in progress, come back later!"
-    # oauth = SpotifyOAuth(
-    #     scope=constant.SCOPE,
-    #     username="temp",
-    #     cache_path=constant.CACHE_PATH + "/.cache-temp",
-    #     client_id=config.client_id,
-    #     client_secret=config.client_secret,
-    #     redirect_uri=config.redirect_uri + "/logout"
-    # )
-    # # get another authorization code so we know who we're logging out
-    # if ("code" not in request.args):
-    #     return redirect(oauth.get_authorize_url())
-    # else:
-    #     logout_page = render_template("logout_sucess.html")
-    #     try:
-    #         token = oauth.get_access_token(request.args["code"], as_dict=False)
-    #     except SpotifyOauthError:
-    #         return render_template("logout_fail.html")
-    #     # which we use to create a client
-    #     client = spotipy.Spotify(auth=token)
-    #     # this is apparently the pythonic way to do this
-    #     try:
-    #         os.remove(constant.CACHE_PATH + "/.cache-" + client.me()['id'])
-    #     except OSError:
-    #         logout_page = render_template(
-    #             "logout_fail.html", id=client.me()['id'])
-    #     try:
-    #         os.remove(oauth.cache_path)
-    #     except OSError:
-    #         pass
-    #     return logout_page
+    """Clear session and log out user"""
+    session.clear()
+    return redirect('/')
+
+
+@auth_server.route("/dashboard")
+@login_required
+def dashboard():
+    """User dashboard showing stats and account management"""
+    try:
+        user = database.get_user(session['user_id'])
+        return render_template("dashboard.html", user=user, url=config.redirect_uri)
+    except Exception as e:
+        return f"Error loading dashboard: {str(e)}", 500
+
+
+@auth_server.route("/unregister", methods=["POST"])
+@login_required
+def unregister():
+    """Deactivate user account"""
+    try:
+        database.update_user(session['user_id'], "active", False)
+        flash("Your account has been deactivated. You can reactivate by logging in again.", "success")
+        session.clear()
+        return redirect('/')
+    except Exception as e:
+        flash(f"Error deactivating account: {str(e)}", "error")
+        return redirect('/dashboard')
+
+
+@auth_server.route("/admin")
+@admin_required
+def admin_panel():
+    """Admin panel to manage users"""
+    try:
+        users = database.get_users()
+        return render_template("admin.html", users=users, url=config.redirect_uri)
+    except Exception as e:
+        return f"Error loading admin panel: {str(e)}", 500
+
+
+@auth_server.route("/admin/toggle-user", methods=["POST"])
+@admin_required
+def admin_toggle_user():
+    """Toggle user active status"""
+    user_id = request.form.get('user_id')
+    if not user_id:
+        flash("User ID required", "error")
+        return redirect('/admin')
+    
+    try:
+        user = database.get_user(user_id)
+        new_status = not user.get('active', True)
+        database.update_user(user_id, "active", new_status)
+        status_text = "activated" if new_status else "deactivated"
+        flash(f"User {user_id} has been {status_text}", "success")
+    except Exception as e:
+        flash(f"Error toggling user: {str(e)}", "error")
+    
+    return redirect('/admin')
+
+
+@auth_server.route("/admin/errors")
+@admin_required
+def admin_errors():
+    """View recent errors"""
+    try:
+        errors = database.get_recent_errors(limit=50)
+        return render_template("admin_errors.html", errors=errors, url=config.redirect_uri)
+    except Exception as e:
+        return f"Error loading errors: {str(e)}", 500
 
 
 @auth_server.route("/check_status")

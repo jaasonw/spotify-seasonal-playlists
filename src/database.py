@@ -86,3 +86,15 @@ def add_error(id, error, traceback):
 
 def remove_user(id):
     update_user(id, "active", False)
+
+
+def get_recent_errors(limit=50):
+    """Get recent errors from the database, sorted by newest first"""
+    token = pocketbase_auth()
+    req = requests.get(
+        f"{pocketbase_url}/api/collections/errors/records",
+        params={"perPage": limit, "sort": "-created"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    req.raise_for_status()
+    return req.json()["items"]

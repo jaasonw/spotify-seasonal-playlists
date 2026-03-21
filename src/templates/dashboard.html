@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <title>Dashboard - Spotify Seasonal Playlist Creator</title>
+        <style>
+            .dashboard-container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+            .stat-card { margin-bottom: 1.5rem; }
+            .navbar-brand { font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="/">Spotify Seasonal Playlists</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    {% if user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Admin Panel</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <h1 class="mb-4">Your Dashboard</h1>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card stat-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Account Status</h5>
+                            <p class="card-text">
+                                <strong>Spotify ID:</strong> {{ user.user_id }}<br>
+                                <strong>Status:</strong> 
+                                {% if user.active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}<br>
+                                {% if user.is_admin %}
+                                <strong>Role:</strong> <span class="badge badge-primary">Admin</span><br>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card stat-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Playlist Stats</h5>
+                            <p class="card-text">
+                                <strong>Updates:</strong> {{ user.update_count or 0 }}<br>
+                                <strong>Last Update:</strong> {{ user.last_update or 'Never' }}<br>
+                                <strong>Errors:</strong> {{ user.error_count or 0 }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Account Management</h5>
+                    <p class="card-text">Unlink your Spotify account and stop automatic playlist updates.</p>
+                    <form action="/unregister" method="POST" onsubmit="return confirm('Are you sure you want to deactivate your account? You can reactivate by logging in again.');">
+                        <button type="submit" class="btn btn-danger">Deactivate Account</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <a href="{{ url }}/logout" class="btn btn-outline-secondary">Logout</a>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    </body>
+</html>

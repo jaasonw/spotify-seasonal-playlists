@@ -11,7 +11,6 @@ services:
       - .env
     environment:
       - pocketbase_url=http://spotify-seasonal-database:8090
-      - frontend_url=http://spotify-seasonal-frontend:3000
   spotify-seasonal-database:
     image: ghcr.io/muchobien/pocketbase:0.22.32
     container_name: spotify-seasonal-database
@@ -28,17 +27,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  spotify-seasonal-frontend:
-    build: ./frontend
-    container_name: spotify-seasonal-frontend
-    expose:
-      - 3000
-    ports:
-      - "127.0.0.1:8092:3000"
-    environment:
-      - pocketbase_url=http://spotify-seasonal-database:8090
-      - backend_url=http://spotify-seasonal-backend:8080
-    restart: unless-stopped
+  # spotify-seasonal-frontend removed - now served directly by Flask backend
   # spotify-seasonal-proxy:
   #   image: caddy:latest
   #   container_name: spotify-seasonal-proxy
