@@ -78,10 +78,10 @@ def run_worker_loop(update_frequency: int):
                     # e.g., 30 users / 300s = 1 user every 10s
                     sleep_interval = max(1, update_frequency / total_users)
                 
-                # Fetch ONE user needing update
+                # Fetch batch of users needing update
                 stale_users = db.get_users_needing_update(
                     update_frequency=update_frequency, 
-                    limit=1
+                    limit=constant.BATCH_SIZE
                 )
                 
                 if not stale_users:
@@ -90,15 +90,15 @@ def run_worker_loop(update_frequency: int):
                     time.sleep(10)
                     continue
                 
-                user = stale_users[0]
-                logging.info(f"Processing user {user['user_id']} (Total: {total_users}, Interval: {sleep_interval:.2f}s)")
-                db.update_heartbeat("worker", "processing", f"Updating {user['user_id']}")
+                logging.info(f"Processing {len(stale_users)} users (Total: {total_users}, Interval: {sleep_interval:.2f}s per user)")
+                db.update_heartbeat("worker", "processing", f"Updating {len(stale_users)} users")
                 
-                # Submit task to thread pool (non-blocking)
-                executor.submit(update_single_user, user)
+                # Submit tasks to thread pool (non-blocking)
+                futures = [executor.submit(update_single_user, user) for user in stale_users]
                 
-                # Sleep to pace the next update
-                time.sleep(sleep_interval)
+                # Sleep to pace the next update (interval * count)
+                # This keeps the overall rate consistent (e.g. 15s * 2 users = 30s sleep)
+                time.sleep(sleep_interval * len(stale_users))
                     
             except Exception as e:
                 log_error_to_database("SYSTEM", e)

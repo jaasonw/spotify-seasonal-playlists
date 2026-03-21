@@ -75,7 +75,7 @@ def get_active_user_count():
         return 0
 
 
-def get_users_needing_update(update_frequency=300, limit=1):
+def get_users_needing_update(update_frequency=300, limit=10):
     """
     Get active users who haven't been updated recently.
     Returns list of users sorted by last_update (oldest first).
