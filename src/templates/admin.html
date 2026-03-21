@@ -70,7 +70,19 @@
                         <div class="col-md-6">
                             {% if worker_status %}
                                 <strong>Last Heartbeat:</strong> {{ worker_status.last_heartbeat }} UTC<br>
-                                <strong>Details:</strong> {{ worker_status.details }}
+                                <strong>Details:</strong>
+                                {% if worker_status.details_json and worker_status.details_json.users %}
+                                    <div style="max-height: 100px; overflow-y: auto; background: #f8f9fa; padding: 5px; border-radius: 3px; border: 1px solid #ddd;">
+                                        <small class="text-muted">Processing {{ worker_status.details_json.users|length }} users:</small>
+                                        <ul class="list-unstyled mb-0 pl-2">
+                                            {% for uid in worker_status.details_json.users %}
+                                                <li><small><code>{{ uid }}</code></small></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    {{ worker_status.details }}
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>

@@ -265,6 +265,8 @@ def update_heartbeat(component, status, details=""):
         print(f"Failed to update heartbeat: {e}")
 
 
+import json
+
 def get_worker_status():
     """
     Get the latest worker status.
@@ -278,6 +280,16 @@ def get_worker_status():
         )
         req.raise_for_status()
         items = req.json()["items"]
-        return items[0] if items else None
+        
+        if items:
+            status = items[0]
+            # Try to parse details as JSON
+            try:
+                status["details_json"] = json.loads(status["details"])
+            except (json.JSONDecodeError, TypeError):
+                status["details_json"] = None
+            return status
+            
+        return None
     except Exception:
         return None

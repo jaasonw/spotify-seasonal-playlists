@@ -2,6 +2,7 @@ import sys
 import time
 import threading
 import traceback as tb
+import json
 from datetime import datetime as dt
 from datetime import timezone as tz
 from concurrent.futures import ThreadPoolExecutor
@@ -90,8 +91,9 @@ def run_worker_loop(update_frequency: int):
                     time.sleep(10)
                     continue
                 
+                user_ids = [u["user_id"] for u in stale_users]
                 logging.info(f"Processing {len(stale_users)} users (Total: {total_users}, Interval: {sleep_interval:.2f}s per user)")
-                db.update_heartbeat("worker", "processing", f"Updating {len(stale_users)} users")
+                db.update_heartbeat("worker", "processing", json.dumps({"users": user_ids}))
                 
                 # Submit tasks to thread pool (non-blocking)
                 futures = [executor.submit(update_single_user, user) for user in stale_users]
