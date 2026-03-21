@@ -60,6 +60,9 @@ def run_worker_loop(update_frequency: int):
     with ThreadPoolExecutor(max_workers=constant.MAX_WORKERS) as executor:
         while True:
             try:
+                # Update heartbeat - we are alive
+                db.update_heartbeat("worker", "running", "Checking for users...")
+                
                 # Fetch batch of users needing update
                 stale_users = db.get_users_needing_update(
                     update_frequency=update_frequency, 
@@ -68,10 +71,12 @@ def run_worker_loop(update_frequency: int):
                 
                 if not stale_users:
                     # No work to do, sleep for a bit
+                    db.update_heartbeat("worker", "idle", "No users needing update")
                     time.sleep(10)
                     continue
                 
                 logging.info(f"Found {len(stale_users)} users to update")
+                db.update_heartbeat("worker", "processing", f"Updating {len(stale_users)} users")
                 
                 # Process batch concurrently
                 futures = [executor.submit(update_single_user, user) for user in stale_users]
@@ -82,6 +87,7 @@ def run_worker_loop(update_frequency: int):
                     
             except Exception as e:
                 log_error_to_database("SYSTEM", e)
+                db.update_heartbeat("worker", "error", str(e))
                 # Sleep briefly to avoid hammering on error loop
                 time.sleep(10)
 

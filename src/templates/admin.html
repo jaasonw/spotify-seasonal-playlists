@@ -47,6 +47,36 @@
                 {% endif %}
             {% endwith %}
 
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">System Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Worker Status:</strong>
+                            {% if worker_status %}
+                                {% if worker_status.status == 'running' or worker_status.status == 'processing' %}
+                                    <span class="badge badge-success">{{ worker_status.status|upper }}</span>
+                                {% elif worker_status.status == 'idle' %}
+                                    <span class="badge badge-info">{{ worker_status.status|upper }}</span>
+                                {% else %}
+                                    <span class="badge badge-danger">{{ worker_status.status|upper }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge badge-warning">UNKNOWN</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if worker_status %}
+                                <strong>Last Heartbeat:</strong> {{ worker_status.last_heartbeat }} UTC<br>
+                                <strong>Details:</strong> {{ worker_status.details }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">All Users ({{ users|length }})</h5>

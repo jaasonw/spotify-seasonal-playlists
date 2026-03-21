@@ -157,7 +157,10 @@ def admin_panel():
         users = database.get_users()
         # Sort by active (descending - active first), then by created date (descending - newest first)
         users.sort(key=lambda u: (-u.get('active', False), u.get('created', '')), reverse=False)
-        return render_template("admin.html", users=users)
+        
+        worker_status = database.get_worker_status()
+        
+        return render_template("admin.html", users=users, worker_status=worker_status)
     except Exception as e:
         return f"Error loading admin panel: {str(e)}", 500
 

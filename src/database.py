@@ -1,5 +1,7 @@
 import requests
 import time
+from datetime import datetime as dt, timedelta
+from datetime import timezone as tz
 from config import pocketbase_url, pocketbase_username, pocketbase_password
 
 # Cache for PocketBase token
@@ -194,3 +196,67 @@ def get_recent_errors(limit=50):
     )
     req.raise_for_status()
     return req.json()["items"]
+
+
+def update_heartbeat(component, status, details=""):
+    """
+    Updates the system_status collection with a heartbeat.
+    """
+    token = pocketbase_auth()
+    timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Check if record exists
+    try:
+        req = requests.get(
+            f"{pocketbase_url}/api/collections/system_status/records",
+            params={"filter": f"component='{component}'"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        req.raise_for_status()
+        items = req.json()["items"]
+        
+        if items:
+            # Update existing
+            record_id = items[0]["id"]
+            req = requests.patch(
+                f"{pocketbase_url}/api/collections/system_status/records/{record_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "last_heartbeat": timestamp,
+                    "status": status,
+                    "details": details
+                },
+            )
+        else:
+            # Create new
+            req = requests.post(
+                f"{pocketbase_url}/api/collections/system_status/records",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "component": component,
+                    "last_heartbeat": timestamp,
+                    "status": status,
+                    "details": details
+                },
+            )
+        req.raise_for_status()
+    except Exception as e:
+        print(f"Failed to update heartbeat: {e}")
+
+
+def get_worker_status():
+    """
+    Get the latest worker status.
+    """
+    try:
+        token = pocketbase_auth()
+        req = requests.get(
+            f"{pocketbase_url}/api/collections/system_status/records",
+            params={"filter": "component='worker'", "sort": "-last_heartbeat"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        req.raise_for_status()
+        items = req.json()["items"]
+        return items[0] if items else None
+    except Exception:
+        return None
