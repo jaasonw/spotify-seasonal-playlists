@@ -86,30 +86,29 @@ def get_users_needing_update(update_frequency=300, limit=10):
     stale_users = []
     
     for user in all_active_users:
-        last_update_str = user.get("last_update", "")
+        # Check last_polled (scheduler timestamp) instead of last_update (content timestamp)
+        last_polled_str = user.get("last_polled", "")
         
-        # If never updated, it's stale
-        if not last_update_str:
+        # If never polled, it's stale
+        if not last_polled_str:
             stale_users.append(user)
             continue
             
         try:
             # Parse "YYYY-MM-DD HH:MM:SS"
-            # We assume stored time is naive and treat it as UTC
-            last_update = dt.strptime(last_update_str, "%Y-%m-%d %H:%M:%S")
-            # Force UTC if naive to match cutoff_time
-            if not last_update.tzinfo:
-                last_update = last_update.replace(tzinfo=tz.utc)
+            last_polled = dt.strptime(last_polled_str, "%Y-%m-%d %H:%M:%S")
+            # Force UTC if naive
+            if not last_polled.tzinfo:
+                last_polled = last_polled.replace(tzinfo=tz.utc)
                 
-            if last_update < cutoff_time:
+            if last_polled < cutoff_time:
                 stale_users.append(user)
         except ValueError:
-            # If date parsing fails, treat as stale to fix it
+            # If date parsing fails, treat as stale
             stale_users.append(user)
             
-    # Sort by last_update string (lexicographical sort works for ISO-like dates)
-    # Empty strings come first
-    stale_users.sort(key=lambda u: u.get("last_update", ""))
+    # Sort by last_polled string (oldest first)
+    stale_users.sort(key=lambda u: u.get("last_polled", ""))
     
     return stale_users[:limit]
 
@@ -161,6 +160,7 @@ def get_or_create_user(id):
                 "last_error": "",
                 "last_playlist": "",
                 "last_update": "",
+                "last_polled": "",
                 "active": True,
             },
         )

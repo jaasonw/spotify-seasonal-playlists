@@ -2,6 +2,8 @@ import sys
 import time
 import threading
 import traceback as tb
+from datetime import datetime as dt
+from datetime import timezone as tz
 from concurrent.futures import ThreadPoolExecutor
 
 import config
@@ -28,6 +30,10 @@ def update_single_user(user):
     try:
         client = spotipy.Spotify(auth_manager=oauth)
         playlist.update_playlist(client, user)
+
+        # Mark as polled to prevent immediate retry
+        timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
+        db.update_user(user["user_id"], "last_polled", timestamp)
 
         # reset the users error count if an update was successful
         if user.get("error_count", 0) > 0:

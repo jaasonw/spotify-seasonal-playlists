@@ -91,7 +91,8 @@
                                     <th>Admin</th>
                                     <th>Updates</th>
                                     <th>Errors</th>
-                                    <th>Last Update</th>
+                                    <th>Last Polled</th>
+                                    <th>Last Playlist Update</th>
                                     <th>Last Playlist</th>
                                     <th>Actions</th>
                                 </tr>
@@ -116,6 +117,7 @@
                                     </td>
                                     <td>{{ user.update_count or 0 }}</td>
                                     <td>{{ user.error_count or 0 }}</td>
+                                    <td>{{ user.last_polled or 'Never' }}</td>
                                     <td>{{ user.last_update or 'Never' }}</td>
                                     <td>{{ user.last_playlist or 'N/A' }}</td>
                                     <td>
