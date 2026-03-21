@@ -11,6 +11,12 @@ services:
       - .env
     environment:
       - pocketbase_url=http://spotify-seasonal-database:8090
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
   spotify-seasonal-database:
     image: ghcr.io/muchobien/pocketbase:0.22.32
     container_name: spotify-seasonal-database
@@ -25,5 +31,11 @@ services:
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
       interval: 5s
-      timeout: 5s
+      timeout:  5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
