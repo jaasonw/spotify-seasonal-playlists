@@ -1,18 +1,19 @@
-import sys
-import time
-import threading
-import traceback as tb
 import json
+import logging
+import sys
+import threading
+import time
+import traceback as tb
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime as dt
 from datetime import timezone as tz
-from concurrent.futures import ThreadPoolExecutor
+
+import spotipy
 
 import config
 import constant
 import database as db
 import playlist
-import spotipy
-import logging
 from DatabaseCacheHandler import DatabaseCacheHandler
 
 
@@ -63,45 +64,50 @@ def run_worker_loop(update_frequency: int):
     Continuously fetches stale users and updates them using a thread pool.
     """
     logging.info("Starting worker loop")
-    
+
     with ThreadPoolExecutor(max_workers=constant.MAX_WORKERS) as executor:
         while True:
             try:
                 # Update heartbeat - we are alive
                 db.update_heartbeat("worker", "running", "Checking for users...")
-                
+
                 # Dynamic pacing: Calculate sleep time to spread updates evenly
                 total_users = db.get_active_user_count()
                 sleep_interval = 10  # Default if no users
-                
+
                 if total_users > 0:
                     # Spread updates over the update frequency period
                     # e.g., 30 users / 300s = 1 user every 10s
                     sleep_interval = max(1, update_frequency / total_users)
-                
+
                 # Fetch batch of users needing update
                 stale_users = db.get_users_needing_update(
-                    update_frequency=update_frequency, 
-                    limit=constant.BATCH_SIZE
+                    update_frequency=update_frequency, limit=constant.BATCH_SIZE
                 )
-                
+
                 if not stale_users:
                     # No work to do, sleep for a bit (but not too long)
                     db.update_heartbeat("worker", "idle", "No users needing update")
                     time.sleep(10)
                     continue
-                
+
                 user_ids = [u["user_id"] for u in stale_users]
-                logging.info(f"Processing {len(stale_users)} users (Total: {total_users}, Interval: {sleep_interval:.2f}s per user)")
-                db.update_heartbeat("worker", "processing", json.dumps({"users": user_ids}))
-                
+                logging.info(
+                    f"Processing {len(stale_users)} users (Total: {total_users}, Interval: {sleep_interval:.2f}s per user)"
+                )
+                db.update_heartbeat(
+                    "worker", "processing", json.dumps({"users": user_ids})
+                )
+
                 # Submit tasks to thread pool (non-blocking)
-                futures = [executor.submit(update_single_user, user) for user in stale_users]
-                
+                futures = [
+                    executor.submit(update_single_user, user) for user in stale_users
+                ]
+
                 # Sleep to pace the next update (interval * count)
                 # This keeps the overall rate consistent (e.g. 15s * 2 users = 30s sleep)
                 time.sleep(sleep_interval * len(stale_users))
-                    
+
             except Exception as e:
                 log_error_to_database("SYSTEM", e)
                 db.update_heartbeat("worker", "error", str(e))
@@ -115,6 +121,6 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         if sys.argv[1] == "--debug":
             debug = True
-            
+
     # Run the worker loop
     run_worker_loop(10 if debug else constant.UPDATE_FREQUENCY)

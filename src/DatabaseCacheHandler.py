@@ -1,7 +1,8 @@
-from spotipy import CacheHandler
 import requests
-from database import pocketbase_auth
+from spotipy import CacheHandler
+
 from config import pocketbase_url
+from database import pocketbase_auth
 
 
 class DatabaseCacheHandler(CacheHandler):
@@ -37,7 +38,7 @@ class DatabaseCacheHandler(CacheHandler):
             )
             req.raise_for_status()
             return
-        
+
         # it exists, update it
         token = pocketbase_auth()
         record_id = auth_token["id"]

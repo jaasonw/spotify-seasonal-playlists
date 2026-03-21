@@ -1,8 +1,9 @@
 import os
+from functools import wraps
+
 import requests
 import spotipy
-from flask import Flask, redirect, render_template, request, session, flash
-from functools import wraps
+from flask import Flask, flash, redirect, render_template, request, session
 from spotipy.cache_handler import MemoryCacheHandler
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 
@@ -14,7 +15,9 @@ from playlist import update_playlist
 
 auth_server = Flask(__name__)
 auth_server.debug = False
-auth_server.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
+auth_server.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY", "dev-secret-key-change-in-production"
+)
 
 
 @auth_server.context_processor
@@ -25,27 +28,31 @@ def inject_url_prefix():
 
 def login_required(f):
     """Decorator to require login for a route"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(config.url_prefix + '/login')
+        if "user_id" not in session:
+            return redirect(config.url_prefix + "/login")
         return f(*args, **kwargs)
+
     return decorated_function
 
 
 def admin_required(f):
     """Decorator to require admin privileges for a route"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(config.url_prefix + '/login')
+        if "user_id" not in session:
+            return redirect(config.url_prefix + "/login")
         try:
-            user = database.get_user(session['user_id'])
-            if not user.get('is_admin', False):
+            user = database.get_user(session["user_id"])
+            if not user.get("is_admin", False):
                 return "Access denied: Admin privileges required", 403
         except Exception as e:
             return f"Error checking admin status: {str(e)}", 500
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -111,9 +118,9 @@ def auth_page():
         update_playlist(client, user)
 
         # Store user_id in session
-        session['user_id'] = user['user_id']
+        session["user_id"] = user["user_id"]
 
-        return redirect(config.url_prefix + '/dashboard')
+        return redirect(config.url_prefix + "/dashboard")
     return render_template("auth_success.html")
 
 
@@ -121,7 +128,7 @@ def auth_page():
 def logout_page():
     """Clear session and log out user"""
     session.clear()
-    return redirect(config.url_prefix + '/')
+    return redirect(config.url_prefix + "/")
 
 
 @auth_server.route("/dashboard")
@@ -129,7 +136,7 @@ def logout_page():
 def dashboard():
     """User dashboard showing stats and account management"""
     try:
-        user = database.get_user(session['user_id'])
+        user = database.get_user(session["user_id"])
         return render_template("dashboard.html", user=user, url=config.redirect_uri)
     except Exception as e:
         return f"Error loading dashboard: {str(e)}", 500
@@ -140,13 +147,16 @@ def dashboard():
 def unregister():
     """Deactivate user account"""
     try:
-        database.update_user(session['user_id'], "active", False)
-        flash("Your account has been deactivated. You can reactivate by logging in again.", "success")
+        database.update_user(session["user_id"], "active", False)
+        flash(
+            "Your account has been deactivated. You can reactivate by logging in again.",
+            "success",
+        )
         session.clear()
-        return redirect(config.url_prefix + '/')
+        return redirect(config.url_prefix + "/")
     except Exception as e:
         flash(f"Error deactivating account: {str(e)}", "error")
-        return redirect(config.url_prefix + '/dashboard')
+        return redirect(config.url_prefix + "/dashboard")
 
 
 @auth_server.route("/admin")
@@ -156,10 +166,12 @@ def admin_panel():
     try:
         users = database.get_users()
         # Sort by active (descending - active first), then by created date (descending - newest first)
-        users.sort(key=lambda u: (-u.get('active', False), u.get('created', '')), reverse=False)
-        
+        users.sort(
+            key=lambda u: (-u.get("active", False), u.get("created", "")), reverse=False
+        )
+
         worker_status = database.get_worker_status()
-        
+
         return render_template("admin.html", users=users, worker_status=worker_status)
     except Exception as e:
         return f"Error loading admin panel: {str(e)}", 500
@@ -169,21 +181,21 @@ def admin_panel():
 @admin_required
 def admin_toggle_user():
     """Toggle user active status"""
-    user_id = request.form.get('user_id')
+    user_id = request.form.get("user_id")
     if not user_id:
         flash("User ID required", "error")
-        return redirect(config.url_prefix + '/admin')
-    
+        return redirect(config.url_prefix + "/admin")
+
     try:
         user = database.get_user(user_id)
-        new_status = not user.get('active', True)
+        new_status = not user.get("active", True)
         database.update_user(user_id, "active", new_status)
         status_text = "activated" if new_status else "deactivated"
         flash(f"User {user_id} has been {status_text}", "success")
     except Exception as e:
         flash(f"Error toggling user: {str(e)}", "error")
-    
-    return redirect(config.url_prefix + '/admin')
+
+    return redirect(config.url_prefix + "/admin")
 
 
 @auth_server.route("/admin/errors")
@@ -192,7 +204,9 @@ def admin_errors():
     """View recent errors"""
     try:
         errors = database.get_recent_errors(limit=50)
-        return render_template("admin_errors.html", errors=errors, url=config.redirect_uri)
+        return render_template(
+            "admin_errors.html", errors=errors, url=config.redirect_uri
+        )
     except Exception as e:
         return f"Error loading errors: {str(e)}", 500
 

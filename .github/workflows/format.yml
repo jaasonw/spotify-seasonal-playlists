@@ -1,0 +1,41 @@
+name: Format Check
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+        
+    - name: Install Python dev dependencies
+      run: |
+        pip install -r requirements-dev.txt
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Check Python formatting (Black)
+      run: |
+        black --check src/*.py
+        
+    - name: Check Python import order (isort)
+      run: |
+        isort --check-only src/*.py
+        
+    - name: Check HTML formatting (Prettier)
+      run: |
+        npx prettier --check src/templates/*.html

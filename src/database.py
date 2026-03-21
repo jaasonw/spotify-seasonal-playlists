@@ -1,8 +1,11 @@
-import requests
 import time
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt
+from datetime import timedelta
 from datetime import timezone as tz
-from config import pocketbase_url, pocketbase_username, pocketbase_password
+
+import requests
+
+from config import pocketbase_password, pocketbase_url, pocketbase_username
 
 # Cache for PocketBase token
 _pb_token = None
@@ -12,11 +15,11 @@ TOKEN_LIFETIME = 3600  # 1 hour in seconds
 
 def pocketbase_auth():
     global _pb_token, _pb_token_expiry
-    
+
     # Return cached token if still valid (with 60s buffer)
     if _pb_token and time.time() < _pb_token_expiry - 60:
         return _pb_token
-        
+
     req = requests.post(
         f"{pocketbase_url}/api/collections/_superusers/auth-with-password",
         json={"identity": pocketbase_username, "password": pocketbase_password},
@@ -26,7 +29,7 @@ def pocketbase_auth():
     # PocketBase tokens are usually valid for 14 days, but let's refresh hourly to be safe
     # and avoid checking "exp" claim decoding complexity
     _pb_token_expiry = time.time() + TOKEN_LIFETIME
-    
+
     return _pb_token
 
 
@@ -81,7 +84,7 @@ def get_users_needing_update(update_frequency=300, limit=10):
     Returns list of users sorted by last_update (oldest first).
     """
     token = pocketbase_auth()
-    
+
     # We fetch active users and filter in Python for robustness with date formats
     # This is fine for < 500 users. For larger scale, we'd use PocketBase filtering.
     try:
@@ -92,7 +95,7 @@ def get_users_needing_update(update_frequency=300, limit=10):
             params={
                 "perPage": 500,
                 "filter": "active=true",
-                "sort": "updated", 
+                "sort": "updated",
             },
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -105,45 +108,45 @@ def get_users_needing_update(update_frequency=300, limit=10):
     # Calculate cutoff time (UTC)
     cutoff_time = dt.now(tz=tz.utc) - timedelta(seconds=update_frequency)
     stale_users = []
-    
+
     for user in all_active_users:
         # Check last_polled (scheduler timestamp) instead of last_update (content timestamp)
         last_polled_str = user.get("last_polled", "")
-        
+
         # If never polled, it's stale
         if not last_polled_str:
             stale_users.append(user)
             continue
-            
+
         try:
             # Parse "YYYY-MM-DD HH:MM:SS"
             last_polled = dt.strptime(last_polled_str, "%Y-%m-%d %H:%M:%S")
             # Force UTC if naive
             if not last_polled.tzinfo:
                 last_polled = last_polled.replace(tzinfo=tz.utc)
-                
+
             if last_polled < cutoff_time:
                 stale_users.append(user)
         except ValueError:
             # If date parsing fails, treat as stale
             stale_users.append(user)
-            
+
     # Sort by last_polled string (oldest first)
     stale_users.sort(key=lambda u: u.get("last_polled", ""))
-    
+
     return stale_users[:limit]
 
 
 def update_user(id, field, value, user_record=None):
     token = pocketbase_auth()
-    
+
     # Use provided record if available to avoid extra fetch
     if user_record:
         record_id = user_record["id"]
     else:
         user = get_user(id)
         record_id = user["id"]
-        
+
     req = requests.patch(
         f"{pocketbase_url}/api/collections/users/records/{record_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -168,7 +171,7 @@ def get_or_create_user(id):
             user["active"] = True  # Update local object
             return user
         return user
-    except (IndexError, KeyError):
+    except IndexError, KeyError:
         # User doesn't exist, create them
         token = pocketbase_auth()
         req = requests.post(
@@ -225,7 +228,7 @@ def update_heartbeat(component, status, details=""):
     """
     token = pocketbase_auth()
     timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    
+
     # Check if record exists
     try:
         req = requests.get(
@@ -235,7 +238,7 @@ def update_heartbeat(component, status, details=""):
         )
         req.raise_for_status()
         items = req.json()["items"]
-        
+
         if items:
             # Update existing
             record_id = items[0]["id"]
@@ -245,7 +248,7 @@ def update_heartbeat(component, status, details=""):
                 json={
                     "last_heartbeat": timestamp,
                     "status": status,
-                    "details": details
+                    "details": details,
                 },
             )
         else:
@@ -257,7 +260,7 @@ def update_heartbeat(component, status, details=""):
                     "component": component,
                     "last_heartbeat": timestamp,
                     "status": status,
-                    "details": details
+                    "details": details,
                 },
             )
         req.raise_for_status()
@@ -266,6 +269,7 @@ def update_heartbeat(component, status, details=""):
 
 
 import json
+
 
 def get_worker_status():
     """
@@ -280,16 +284,16 @@ def get_worker_status():
         )
         req.raise_for_status()
         items = req.json()["items"]
-        
+
         if items:
             status = items[0]
             # Try to parse details as JSON
             try:
                 status["details_json"] = json.loads(status["details"])
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 status["details_json"] = None
             return status
-            
+
         return None
     except Exception:
         return None

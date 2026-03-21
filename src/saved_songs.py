@@ -15,7 +15,9 @@ def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify) -> deque:
     while True:
         songs_liked = client.current_user_saved_tracks(chunks, offset)
         for song in songs_liked["items"]:
-            added_at = dt.strptime(song["added_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=tz.utc)
+            added_at = dt.strptime(song["added_at"], "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=tz.utc
+            )
             if dt_threshold < added_at:
                 song_ids.append(song["track"]["id"])
             else:
