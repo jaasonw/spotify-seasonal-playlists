@@ -222,6 +222,21 @@ def get_recent_errors(limit=50):
     return req.json()["items"]
 
 
+def get_error_count_since(seconds):
+    """Count error records created in the last `seconds`, across all users."""
+    token = pocketbase_auth()
+    cutoff = (dt.now(tz=tz.utc) - timedelta(seconds=seconds)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    req = requests.get(
+        f"{pocketbase_url}/api/collections/errors/records",
+        params={"perPage": 1, "filter": f"created>='{cutoff}'", "fields": "id"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    req.raise_for_status()
+    return req.json()["totalItems"]
+
+
 def update_heartbeat(component, status, details=""):
     """
     Updates the system_status collection with a heartbeat.

@@ -13,6 +13,7 @@ import spotipy
 import config
 import constant
 import database as db
+import notify
 import playlist
 from DatabaseCacheHandler import DatabaseCacheHandler
 
@@ -52,11 +53,18 @@ def update_single_user(user):
                 logging.error("Could not set user to inactive")
 
 
+def is_transient_error(e: Exception) -> bool:
+    """Errors caused by Spotify/network being down, not the user's fault."""
+    msg = str(e)
+    return any(marker in msg for marker in constant.TRANSIENT_ERROR_MARKERS)
+
+
 def log_error_to_database(user: str, e: Exception):
     traceback = "".join(tb.format_tb(e.__traceback__))
-    if user != "SYSTEM":
+    if user != "SYSTEM" and not is_transient_error(e):
         db.increment_field(user, "error_count")
     db.add_error(user, error=str(e), traceback=traceback)
+    notify.check_error_rate_and_alert(db)
 
 
 def run_worker_loop(update_frequency: int):

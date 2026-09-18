@@ -12,3 +12,5 @@ flask_secret_key = os.environ.get(
     "FLASK_SECRET_KEY", "dev-secret-key-change-in-production"
 )
 url_prefix = os.environ.get("URL_PREFIX", "")
+telegram_bot_token = os.environ.get("telegram_bot_token")
+telegram_chat_id = os.environ.get("telegram_chat_id")
