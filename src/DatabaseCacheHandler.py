@@ -28,7 +28,7 @@ class DatabaseCacheHandler(CacheHandler):
         # check for existing token
         try:
             auth_token = self.get_cached_token()
-        except (requests.HTTPError, IndexError):
+        except requests.HTTPError, IndexError:
             # it doesnt exist, create it
             token = pocketbase_auth()
             token_info["user_id"] = self.username

@@ -42,7 +42,9 @@ def update_single_user(user):
         # reset the users error count if an update was successful
         if user.get("error_count", 0) > 0:
             db.update_user(user["user_id"], "error_count", 0)
-    except Exception as e:  # noqa: BLE001 - isolate per-user failures, must not crash the worker loop
+    except (
+        Exception
+    ) as e:  # noqa: BLE001 - isolate per-user failures, must not crash the worker loop
         log_error_to_database(user["user_id"], e)
 
         # if a user passes a certain error threshold, mark them as
@@ -116,7 +118,9 @@ def run_worker_loop(update_frequency: int):
                 # This keeps the overall rate consistent (e.g. 15s * 2 users = 30s sleep)
                 time.sleep(sleep_interval * len(stale_users))
 
-            except Exception as e:  # noqa: BLE001 - top-level loop guard, must not crash the worker
+            except (
+                Exception
+            ) as e:  # noqa: BLE001 - top-level loop guard, must not crash the worker
                 log_error_to_database("SYSTEM", e)
                 db.update_heartbeat("worker", "error", str(e))
                 # Sleep briefly to avoid hammering on error loop
