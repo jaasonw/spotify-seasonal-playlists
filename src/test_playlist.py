@@ -12,8 +12,31 @@ os.environ.setdefault("pocketbase_url", "test")
 os.environ.setdefault("pocketbase_username", "test")
 os.environ.setdefault("pocketbase_password", "test")
 
+import spotipy
+
 import constant
-from playlist import get_current_season, start_season_time
+from playlist import get_current_season, get_target_playlist, start_season_time
+
+
+class FakeClient:
+    """Stands in for spotipy.Spotify with only the methods get_target_playlist calls."""
+
+    def __init__(self, playlists=None, raises=None):
+        self.playlists = playlists or {}
+        self.raises = raises
+        self.created = []
+
+    def playlist(self, playlist_id):
+        if self.raises:
+            raise self.raises
+        return {"name": self.playlists[playlist_id]}
+
+    def me(self):
+        return {"id": "someone"}
+
+    def user_playlist_create(self, user_id, name, public, description):
+        self.created.append(name)
+        return {"id": f"new-{name}"}
 
 
 class TestGetCurrentSeason(unittest.TestCase):
@@ -71,6 +94,45 @@ class TestStartSeasonTime(unittest.TestCase):
             start_season_time(dt(2024, 10, 15)),
             dt(2024, 9, 1, tzinfo=tz.utc),
         )
+
+
+class TestGetTargetPlaylist(unittest.TestCase):
+    date = dt(2024, 10, 15)  # fall 2024
+
+    def test_reuses_cached_playlist_in_current_season(self):
+        client = FakeClient(playlists={"abc": "fall 2024"})
+        result = get_target_playlist(self.date, client, {"last_playlist": "abc"})
+        self.assertEqual(result, "abc")
+        self.assertEqual(client.created, [])
+
+    def test_creates_new_playlist_when_cached_one_is_out_of_season(self):
+        client = FakeClient(playlists={"abc": "summer 2024"})
+        result = get_target_playlist(self.date, client, {"last_playlist": "abc"})
+        self.assertEqual(result, "new-fall 2024")
+        self.assertEqual(client.created, ["fall 2024"])
+
+    def test_creates_new_playlist_when_nothing_cached(self):
+        client = FakeClient()
+        self.assertEqual(
+            get_target_playlist(self.date, client, {"last_playlist": ""}),
+            "new-fall 2024",
+        )
+        self.assertEqual(
+            get_target_playlist(self.date, client, {}),
+            "new-fall 2024",
+        )
+
+    def test_creates_new_playlist_when_cached_one_was_deleted(self):
+        client = FakeClient(
+            raises=spotipy.SpotifyException(404, -1, "playlist not found")
+        )
+        result = get_target_playlist(self.date, client, {"last_playlist": "gone"})
+        self.assertEqual(result, "new-fall 2024")
+
+    def test_reraises_non_404_spotify_errors(self):
+        client = FakeClient(raises=spotipy.SpotifyException(500, -1, "server error"))
+        with self.assertRaises(spotipy.SpotifyException):
+            get_target_playlist(self.date, client, {"last_playlist": "abc"})
 
 
 if __name__ == "__main__":

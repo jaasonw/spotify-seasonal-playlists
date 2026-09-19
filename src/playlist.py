@@ -32,11 +32,9 @@ def create_playlist(client: spotipy.Spotify, playlist_name: str) -> str:
 
 def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
     """
-    Returns the playlist id based on date
+    Returns the playlist id based on date, creating the playlist if needed.
 
-    ASSUMPTIONS: a user has no duplicate playlist names
-    In the case that a user has a duplicate playlist name, the script will modify the one 'lower' in the user's playlist library
-    Solution: no intuitive workaround
+    Relies on the cached last_playlist id; we never look a playlist up by name.
     """
     # december of 2019 looks for playlist "winter 2020"
     target_playlist_name = (
@@ -44,45 +42,38 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
         + " "
         + str(date.year if date.month != 12 else date.year + 1)
     )
-    chunk, offset = 50, 0
-    all_playlists = {}
 
-    # Case 1: Playlist is cached and playlist is current season
+    # case 1: Playlist is cached and playlist is current season
     #   Good, use it
-    # Case 2: Playlist is cached but playlist is out of season
+    # case 2: Playlist is cached but playlist is out of season
     #   Make a new playlist and cache it
-    # Case 3: Playlist isnt cached
-    #   Look for it
+    # case 3: Playlist isnt cached
+    #   Make a new playlist and cache it
+    # case 4: Playlist is cached but the user deleted it
+    #   Make a new playlist and cache it
+    #
+    # case 3 used to scan every playlist looking for one matching the target
+    # name, but that rate-limited us on users with large libraries. Worst case
+    # now is one duplicate seasonal playlist for a user whose record was reset;
+    # last_playlist is rewritten each run.
 
-    playlist_id = ""
-    try:
-        playlist_id = user["last_playlist"]
-        # case 1
-        if (
-            playlist_id != ""
-            and client.playlist(playlist_id)["name"] == target_playlist_name
-        ):
-            return playlist_id
-        # case 2
-        else:
-            return create_playlist(client, target_playlist_name)
-    except KeyError:
-        # case 3: do nothing, it's not cached, hopefully this is rare
-        pass
-
-    while True:
-        playlist_info = client.current_user_playlists(chunk, offset)
-        for item in playlist_info["items"]:
-            all_playlists[item["name"]] = item["id"]
-        if len(all_playlists) >= playlist_info["total"]:
-            break
-        else:
-            offset += chunk
-
-    if target_playlist_name not in all_playlists:
+    # case 3
+    playlist_id = user.get("last_playlist", "")
+    if not playlist_id:
         return create_playlist(client, target_playlist_name)
-    else:
-        return all_playlists[target_playlist_name]
+
+    try:
+        # case 1
+        if client.playlist(playlist_id)["name"] == target_playlist_name:
+            return playlist_id
+    except spotipy.SpotifyException as e:
+        # case 4: make a new one rather than erroring every cycle until the
+        # user trips ERROR_THRESHOLD and gets marked inactive
+        if e.http_status != 404:
+            raise
+
+    # case 2
+    return create_playlist(client, target_playlist_name)
 
 
 # returns a datetime object of the most recently added song of a playlist

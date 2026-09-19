@@ -15,9 +15,11 @@ class DatabaseCacheHandler(CacheHandler):
 
     def get_cached_token(self):
         token = pocketbase_auth()
+        # Escape single quotes per PB filter syntax to prevent filter injection
+        escaped_id = str(self.username).replace("'", r"\'")
         req = requests.get(
-            f"{pocketbase_url}/api/collections/tokens/records?filter=(user_id=%27{self.username}%27)",
-            params={"perPage": 1},
+            f"{pocketbase_url}/api/collections/tokens/records",
+            params={"perPage": 1, "filter": f"(user_id='{escaped_id}')"},
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )

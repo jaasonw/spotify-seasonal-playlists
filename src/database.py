@@ -1,3 +1,4 @@
+import json
 import time
 from datetime import datetime as dt
 from datetime import timedelta
@@ -296,9 +297,6 @@ def update_heartbeat(component, status, details=""):
         req.raise_for_status()
     except Exception as e:
         print(f"Failed to update heartbeat: {e}")
-
-
-import json
 
 
 def get_worker_status():
