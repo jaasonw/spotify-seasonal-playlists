@@ -1,7 +1,6 @@
 import json
 import logging
 import sys
-import threading
 import time
 import traceback as tb
 from concurrent.futures import ThreadPoolExecutor
@@ -17,12 +16,14 @@ import notify
 import playlist
 from DatabaseCacheHandler import DatabaseCacheHandler
 
+logger = logging.getLogger(__name__)
+
 
 def update_single_user(user):
     """
     Updates the playlist for a single user
     """
-    logging.debug(f"Updating {user['user_id']}")
+    logger.debug(f"Updating {user['user_id']}")
     oauth = spotipy.oauth2.SpotifyOAuth(
         scope=constant.SCOPE,
         cache_handler=DatabaseCacheHandler(user["user_id"]),
@@ -41,7 +42,7 @@ def update_single_user(user):
         # reset the users error count if an update was successful
         if user.get("error_count", 0) > 0:
             db.update_user(user["user_id"], "error_count", 0)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - isolate per-user failures, must not crash the worker loop
         log_error_to_database(user["user_id"], e)
 
         # if a user passes a certain error threshold, mark them as
@@ -49,8 +50,8 @@ def update_single_user(user):
         if user.get("error_count", 0) > constant.ERROR_THRESHOLD:
             try:
                 db.update_user(user["user_id"], "active", False)
-            except Exception:
-                logging.error("Could not set user to inactive")
+            except Exception:  # noqa: BLE001 - best-effort, log and move on
+                logger.error("Could not set user to inactive")
 
 
 def is_transient_error(e: Exception) -> bool:
@@ -71,7 +72,7 @@ def run_worker_loop(update_frequency: int):
     """
     Continuously fetches stale users and updates them using a thread pool.
     """
-    logging.info("Starting worker loop")
+    logger.info("Starting worker loop")
 
     with ThreadPoolExecutor(max_workers=constant.MAX_WORKERS) as executor:
         while True:
@@ -100,7 +101,7 @@ def run_worker_loop(update_frequency: int):
                     continue
 
                 user_ids = [u["user_id"] for u in stale_users]
-                logging.info(
+                logger.info(
                     f"Processing {len(stale_users)} users (Total: {total_users}, Interval: {sleep_interval:.2f}s per user)"
                 )
                 db.update_heartbeat(
@@ -108,15 +109,14 @@ def run_worker_loop(update_frequency: int):
                 )
 
                 # Submit tasks to thread pool (non-blocking)
-                futures = [
-                    executor.submit(update_single_user, user) for user in stale_users
-                ]
+                for user in stale_users:
+                    executor.submit(update_single_user, user)
 
                 # Sleep to pace the next update (interval * count)
                 # This keeps the overall rate consistent (e.g. 15s * 2 users = 30s sleep)
                 time.sleep(sleep_interval * len(stale_users))
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - top-level loop guard, must not crash the worker
                 log_error_to_database("SYSTEM", e)
                 db.update_heartbeat("worker", "error", str(e))
                 # Sleep briefly to avoid hammering on error loop

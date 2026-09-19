@@ -8,6 +8,7 @@ UPDATE_FREQUENCY = 60  # in seconds
 ERROR_THRESHOLD = 30
 BATCH_SIZE = 5
 MAX_WORKERS = 5
+SPOTIFY_ADD_TRACKS_LIMIT = 100  # Spotify API max tracks per add-to-playlist call
 
 # Markers of transient/upstream errors (Spotify API outage, rate limiting, etc.)
 # that should NOT count against a user's error_count, since they aren't the

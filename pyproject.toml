@@ -25,3 +25,10 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 skip = [".venv", "build", "dist"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ALL"]

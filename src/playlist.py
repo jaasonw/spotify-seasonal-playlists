@@ -66,7 +66,7 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
         # case 2
         else:
             return create_playlist(client, target_playlist_name)
-    except KeyError as e:
+    except KeyError:
         # case 3: do nothing, it's not cached, hopefully this is rare
         pass
 
@@ -150,7 +150,7 @@ def update_playlist(client: spotipy.Spotify, user):
     chunk = []
     while songs_to_be_added:
         chunk.append(songs_to_be_added.popleft())
-        if len(chunk) == 100:
+        if len(chunk) == constant.SPOTIFY_ADD_TRACKS_LIMIT:
             client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
             chunk.clear()
     # if the chunk isn't completely filled then add the rest of the songs

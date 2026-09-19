@@ -19,6 +19,7 @@ class DatabaseCacheHandler(CacheHandler):
             f"{pocketbase_url}/api/collections/tokens/records?filter=(user_id=%27{self.username}%27)",
             params={"perPage": 1},
             headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
         )
         req.raise_for_status()
         return req.json()["items"][0]
@@ -27,7 +28,7 @@ class DatabaseCacheHandler(CacheHandler):
         # check for existing token
         try:
             auth_token = self.get_cached_token()
-        except Exception:
+        except (requests.HTTPError, IndexError):
             # it doesnt exist, create it
             token = pocketbase_auth()
             token_info["user_id"] = self.username
@@ -35,6 +36,7 @@ class DatabaseCacheHandler(CacheHandler):
                 f"{pocketbase_url}/api/collections/tokens/records",
                 headers={"Authorization": f"Bearer {token}"},
                 json=token_info,
+                timeout=10,
             )
             req.raise_for_status()
             return
@@ -46,5 +48,6 @@ class DatabaseCacheHandler(CacheHandler):
             f"{pocketbase_url}/api/collections/tokens/records/{record_id}",
             headers={"Authorization": f"Bearer {token}"},
             json=token_info,
+            timeout=10,
         )
         req.raise_for_status()

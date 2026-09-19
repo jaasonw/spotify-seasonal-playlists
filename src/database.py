@@ -23,6 +23,7 @@ def pocketbase_auth():
     req = requests.post(
         f"{pocketbase_url}/api/collections/_superusers/auth-with-password",
         json={"identity": pocketbase_username, "password": pocketbase_password},
+        timeout=10,
     )
     req.raise_for_status()
     _pb_token = req.json()["token"]
@@ -39,6 +40,7 @@ def get_user(id):
         f"{pocketbase_url}/api/collections/users/records?filter=(user_id=%27{id}%27)",
         params={"perPage": 1},
         headers={"Authorization": f"Bearer {token}"},
+        timeout=10,
     )
     req.raise_for_status()
     return req.json()["items"][0]
@@ -52,6 +54,7 @@ def get_users():
         f"{pocketbase_url}/api/collections/users/records",
         params={"perPage": 500},
         headers={"Authorization": f"Bearer {token}"},
+        timeout=10,
     )
     req.raise_for_status()
     return req.json()["items"]
@@ -71,6 +74,7 @@ def get_active_user_count():
                 "fields": "id",  # Optimize: only fetch ID
             },
             headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
         )
         req.raise_for_status()
         return req.json()["totalItems"]
@@ -98,6 +102,7 @@ def get_users_needing_update(update_frequency=300, limit=10):
                 "sort": "updated",
             },
             headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
         )
         req.raise_for_status()
         all_active_users = req.json()["items"]
@@ -151,6 +156,7 @@ def update_user(id, field, value, user_record=None):
         f"{pocketbase_url}/api/collections/users/records/{record_id}",
         headers={"Authorization": f"Bearer {token}"},
         json={field: value},
+        timeout=10,
     )
     req.raise_for_status()
 
@@ -187,6 +193,7 @@ def get_or_create_user(id):
                 "last_polled": "",
                 "active": True,
             },
+            timeout=10,
         )
         req.raise_for_status()
         return get_user(id)
@@ -202,6 +209,7 @@ def add_error(id, error, traceback):
             "error": error,
             "traceback": traceback,
         },
+        timeout=10,
     )
     req.raise_for_status()
 
@@ -217,6 +225,7 @@ def get_recent_errors(limit=50):
         f"{pocketbase_url}/api/collections/errors/records",
         params={"perPage": limit, "sort": "-created"},
         headers={"Authorization": f"Bearer {token}"},
+        timeout=10,
     )
     req.raise_for_status()
     return req.json()["items"]
@@ -232,6 +241,7 @@ def get_error_count_since(seconds):
         f"{pocketbase_url}/api/collections/errors/records",
         params={"perPage": 1, "filter": f"created>='{cutoff}'", "fields": "id"},
         headers={"Authorization": f"Bearer {token}"},
+        timeout=10,
     )
     req.raise_for_status()
     return req.json()["totalItems"]
@@ -250,6 +260,7 @@ def update_heartbeat(component, status, details=""):
             f"{pocketbase_url}/api/collections/system_status/records",
             params={"filter": f"component='{component}'"},
             headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
         )
         req.raise_for_status()
         items = req.json()["items"]
@@ -265,6 +276,7 @@ def update_heartbeat(component, status, details=""):
                     "status": status,
                     "details": details,
                 },
+                timeout=10,
             )
         else:
             # Create new
@@ -277,6 +289,7 @@ def update_heartbeat(component, status, details=""):
                     "status": status,
                     "details": details,
                 },
+                timeout=10,
             )
         req.raise_for_status()
     except Exception as e:
@@ -296,6 +309,7 @@ def get_worker_status():
             f"{pocketbase_url}/api/collections/system_status/records",
             params={"filter": "component='worker'", "sort": "-last_heartbeat"},
             headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
         )
         req.raise_for_status()
         items = req.json()["items"]

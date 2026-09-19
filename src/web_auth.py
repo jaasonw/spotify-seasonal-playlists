@@ -1,7 +1,6 @@
 import os
 from functools import wraps
 
-import requests
 import spotipy
 from flask import Flask, flash, redirect, render_template, request, session
 from spotipy.cache_handler import MemoryCacheHandler
@@ -49,7 +48,7 @@ def admin_required(f):
             user = database.get_user(session["user_id"])
             if not user.get("is_admin", False):
                 return "Access denied: Admin privileges required", 403
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
             return f"Error checking admin status: {str(e)}", 500
         return f(*args, **kwargs)
 
@@ -138,7 +137,7 @@ def dashboard():
     try:
         user = database.get_user(session["user_id"])
         return render_template("dashboard.html", user=user, url=config.redirect_uri)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
         return f"Error loading dashboard: {str(e)}", 500
 
 
@@ -154,7 +153,7 @@ def unregister():
         )
         session.clear()
         return redirect(config.url_prefix + "/")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
         flash(f"Error deactivating account: {str(e)}", "error")
         return redirect(config.url_prefix + "/dashboard")
 
@@ -173,7 +172,7 @@ def admin_panel():
         worker_status = database.get_worker_status()
 
         return render_template("admin.html", users=users, worker_status=worker_status)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
         return f"Error loading admin panel: {str(e)}", 500
 
 
@@ -192,7 +191,7 @@ def admin_toggle_user():
         database.update_user(user_id, "active", new_status)
         status_text = "activated" if new_status else "deactivated"
         flash(f"User {user_id} has been {status_text}", "success")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
         flash(f"Error toggling user: {str(e)}", "error")
 
     return redirect(config.url_prefix + "/admin")
@@ -207,7 +206,7 @@ def admin_errors():
         return render_template(
             "admin_errors.html", errors=errors, url=config.redirect_uri
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - route handler boundary, return 500 on any failure
         return f"Error loading errors: {str(e)}", 500
 
 
