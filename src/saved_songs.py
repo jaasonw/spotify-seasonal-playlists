@@ -5,10 +5,9 @@ from datetime import timezone as tz
 import spotipy
 
 
-# returns a list of song ids
-def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify) -> deque:
+def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify, before: dt) -> deque:
     """
-    finds all songs that were added past the last date
+    Return (liked time, track ID) pairs in the half-open checkpoint window.
     """
     song_ids = deque()
     chunks, offset = 50, 0
@@ -18,10 +17,10 @@ def get_unadded_songs(dt_threshold: dt, client: spotipy.Spotify) -> deque:
             added_at = dt.strptime(song["added_at"], "%Y-%m-%dT%H:%M:%SZ").replace(
                 tzinfo=tz.utc
             )
-            if dt_threshold < added_at:
-                song_ids.append(song["track"]["id"])
-            else:
+            if added_at < dt_threshold:
                 return song_ids
+            if added_at < before:
+                song_ids.append((added_at, song["track"]["id"]))
         # edge case: user has less liked songs than the chunk size
         if len(songs_liked["items"]) < chunks:
             return song_ids

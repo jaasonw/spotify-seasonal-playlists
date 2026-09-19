@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from datetime import timezone as tz
+from itertools import groupby
 
 import spotipy
 
@@ -51,13 +52,11 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
     #   Make a new playlist and cache it
     # case 4: Playlist is cached but the user deleted it
     #   Make a new playlist and cache it
-    #
-    # case 3 used to scan every playlist looking for one matching the target
-    # name, but that rate-limited us on users with large libraries. Worst case
-    # now is one duplicate seasonal playlist for a user whose record was reset;
-    # last_playlist is rewritten each run.
 
-    # case 3
+    # case 3: used to scan every playlist for a name match, but that
+    # rate-limited us on large libraries. Worst case now is one duplicate
+    # seasonal playlist if a record was reset, and last_playlist is rewritten
+    # each run.
     playlist_id = user.get("last_playlist", "")
     if not playlist_id:
         return create_playlist(client, target_playlist_name)
@@ -76,11 +75,10 @@ def get_target_playlist(date: dt, client: spotipy.Spotify, user) -> str:
     return create_playlist(client, target_playlist_name)
 
 
-# returns a datetime object of the most recently added song of a playlist
-
-
 def get_newest_date_in_playlist(pl_id: int, client: spotipy.Spotify):
     """
+    returns a datetime object of the most recently added song of a playlist
+
     ASSUMPTIONS: the order of the songs in the playlist is in which the songs were added
     Potential Solution: loop through every track's date added and find the max (not implemented)
     """
@@ -112,38 +110,66 @@ def start_season_time(now: dt) -> dt:
         return dt(now.year, 9, 1, tzinfo=tz.utc)
 
 
-# Updates the playlist for a specific client
-# client: the client to update
-
-
 def update_playlist(client: spotipy.Spotify, user):
-    target_playlist = get_target_playlist(dt.now(tz=tz.utc), client, user)
-    # in utc
-    # last_updated = get_newest_date_in_playlist(target_playlist, client)
+    """
+    Updates the playlist for a specific client
+
+    client: the client to update
+    """
+    # Exclude this second: likes arriving during the fetch belong to the next run.
+    cutoff = dt.now(tz=tz.utc).replace(microsecond=0)
     last_updated = (
         dt.strptime(user["last_update"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz.utc)
         if user["last_update"] != ""
-        else start_season_time(dt.now(tz=tz.utc))
+        else start_season_time(cutoff)
     )
-    songs_to_be_added = get_unadded_songs(last_updated, client)
+    songs = sorted(get_unadded_songs(last_updated, client, cutoff))
+    seasons = {
+        season: [track_id for _, track_id in tracks]
+        for season, tracks in groupby(
+            songs, key=lambda song: start_season_time(song[0])
+        )
+    }
+    seasons.setdefault(start_season_time(cutoff), [])
+    user = dict(user)
+    for season, track_ids in seasons.items():
+        target_playlist = get_target_playlist(season, client, user)
+        # Save the destination before writing tracks so a retry reuses it.
+        database.update_user(
+            user["user_id"], "last_playlist", target_playlist, user_record=user
+        )
+        user["last_playlist"] = target_playlist
 
-    database.update_user(
-        user["user_id"], "last_playlist", target_playlist, user_record=user
-    )
-    if len(songs_to_be_added) < 1:
-        return
-    timestamp = dt.now(tz=tz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    database.update_user(user["user_id"], "last_update", timestamp, user_record=user)
-    database.increment_field(user["user_id"], "update_count")
+        if track_ids:
+            # Reconcile partial batches and requests that succeeded before a timeout.
+            existing = set()
+            offset = 0
+            while True:
+                page = client.playlist_items(target_playlist, limit=100, offset=offset)
+                for item in page["items"]:
+                    track = item.get("track")
+                    if track:
+                        existing.add(track.get("id"))
+                if not page.get("next"):
+                    break
+                offset += len(page["items"])
+            missing = list(dict.fromkeys(t for t in track_ids if t not in existing))
+            for offset in range(0, len(missing), constant.SPOTIFY_ADD_TRACKS_LIMIT):
+                client.user_playlist_add_tracks(
+                    user["user_id"],
+                    target_playlist,
+                    missing[offset : offset + constant.SPOTIFY_ADD_TRACKS_LIMIT],
+                )
 
-    # we can only add 100 songs at a time, place all the songs in a queue
-    # and dequeue into a chunk 100 songs at a time
-    chunk = []
-    while songs_to_be_added:
-        chunk.append(songs_to_be_added.popleft())
-        if len(chunk) == constant.SPOTIFY_ADD_TRACKS_LIMIT:
-            client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
-            chunk.clear()
-    # if the chunk isn't completely filled then add the rest of the songs
-    if len(chunk) > 0:
-        client.user_playlist_add_tracks(client.me()["id"], target_playlist, chunk)
+        next_season = dt(
+            season.year + (season.month == 12),
+            season.month % 12 + 3,
+            1,
+            tzinfo=tz.utc,
+        )
+        checkpoint = min(next_season, cutoff).strftime("%Y-%m-%d %H:%M:%S")
+        database.update_user(
+            user["user_id"], "last_update", checkpoint, user_record=user
+        )
+    if songs:
+        database.increment_field(user["user_id"], "update_count")

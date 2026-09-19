@@ -1,4 +1,5 @@
 import os
+import secrets
 from functools import wraps
 
 import spotipy
@@ -10,7 +11,6 @@ import config
 import constant
 import database
 from DatabaseCacheHandler import DatabaseCacheHandler
-from playlist import update_playlist
 
 auth_server = Flask(__name__)
 auth_server.debug = False
@@ -60,22 +60,6 @@ def frontpage():
     return render_template("index.html", url=config.redirect_uri)
 
 
-@auth_server.route("/init")
-def init_user():
-    id = request.args.get("id")
-    user = database.get_user(id)
-    oauth = SpotifyOAuth(
-        scope=constant.SCOPE,
-        cache_handler=DatabaseCacheHandler(id),
-        client_id=config.client_id,
-        client_secret=config.client_secret,
-        redirect_uri=config.redirect_uri + "/login",
-    )
-    client = spotipy.Spotify(auth_manager=oauth)
-    update_playlist(client, user)
-    return "OK", 200
-
-
 @auth_server.route("/login")
 def auth_page():
     # hacky way to store token in database
@@ -93,8 +77,14 @@ def auth_page():
     )
     # ask the user for authorization here
     if "code" not in request.args:
-        return redirect(oauth.get_authorize_url())
+        session["oauth_state"] = secrets.token_urlsafe(32)
+        return redirect(oauth.get_authorize_url(state=session["oauth_state"]))
     else:
+        expected_state = session.pop("oauth_state", None)
+        if not expected_state or not secrets.compare_digest(
+            expected_state, request.args.get("state", "")
+        ):
+            return "Invalid OAuth state. Please start login again.", 400
         # TODO: backend logic probably doesn't belong here
         # we got the code here, use it to create a token
         try:
@@ -113,10 +103,10 @@ def auth_page():
         db = DatabaseCacheHandler(user_id)
         db.save_token_to_cache(tokenData.get_cached_token())
 
-        # create new playlist for user
-        update_playlist(client, user)
+        # The worker owns playlist writes, including initial population.
 
         # Store user_id in session
+        session.clear()
         session["user_id"] = user["user_id"]
 
         return redirect(config.url_prefix + "/dashboard")

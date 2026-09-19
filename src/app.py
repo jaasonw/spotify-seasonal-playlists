@@ -77,8 +77,13 @@ def run_worker_loop(update_frequency: int):
     logger.info("Starting worker loop")
 
     with ThreadPoolExecutor(max_workers=constant.MAX_WORKERS) as executor:
+        pending = {}
         while True:
             try:
+                for user_id, future in list(pending.items()):
+                    if future.done():
+                        del pending[user_id]
+                        future.result()
                 # Update heartbeat - we are alive
                 db.update_heartbeat("worker", "running", "Checking for users...")
 
@@ -93,8 +98,13 @@ def run_worker_loop(update_frequency: int):
 
                 # Fetch batch of users needing update
                 stale_users = db.get_users_needing_update(
-                    update_frequency=update_frequency, limit=constant.BATCH_SIZE
+                    update_frequency=update_frequency,
+                    limit=constant.BATCH_SIZE + len(pending),
                 )
+                available = max(0, constant.MAX_WORKERS - len(pending))
+                stale_users = [
+                    user for user in stale_users if user["user_id"] not in pending
+                ][: min(constant.BATCH_SIZE, available)]
 
                 if not stale_users:
                     # No work to do, sleep for a bit (but not too long)
@@ -112,7 +122,7 @@ def run_worker_loop(update_frequency: int):
 
                 # Submit tasks to thread pool (non-blocking)
                 for user in stale_users:
-                    executor.submit(update_single_user, user)
+                    pending[user["user_id"]] = executor.submit(update_single_user, user)
 
                 # Sleep to pace the next update (interval * count)
                 # This keeps the overall rate consistent (e.g. 15s * 2 users = 30s sleep)
