@@ -36,9 +36,11 @@ def pocketbase_auth():
 
 def get_user(id):
     token = pocketbase_auth()
+    # Escape single quotes per PB filter syntax to prevent filter injection
+    escaped_id = str(id).replace("'", r"\'")
     req = requests.get(
-        f"{pocketbase_url}/api/collections/users/records?filter=(user_id=%27{id}%27)",
-        params={"perPage": 1},
+        f"{pocketbase_url}/api/collections/users/records",
+        params={"perPage": 1, "filter": f"(user_id='{escaped_id}')"},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10,
     )

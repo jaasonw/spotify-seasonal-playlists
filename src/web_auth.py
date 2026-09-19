@@ -14,9 +14,7 @@ from playlist import update_playlist
 
 auth_server = Flask(__name__)
 auth_server.debug = False
-auth_server.secret_key = os.environ.get(
-    "FLASK_SECRET_KEY", "dev-secret-key-change-in-production"
-)
+auth_server.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 
 @auth_server.context_processor
